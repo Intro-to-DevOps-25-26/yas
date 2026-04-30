@@ -52,6 +52,7 @@ jobs:
 
           changed_files="$(git diff --name-only "$base_sha" "$head_sha" || true)"
           build_all=false
+          reasons=()
 
           if [[ -z "$changed_files" ]]; then
             echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
@@ -59,14 +60,19 @@ jobs:
             exit 0
           fi
 
+          echo "Changed files between $base_sha..$head_sha:" >&2
+          printf '%s\n' "$changed_files" >&2
+
           if printf '%s\n' "$changed_files" | grep -qx 'pom.xml'; then
             build_all=true
+            reasons+=("root pom.xml changed")
           fi
 
           # If shared build config changes, run CI for all modules.
           # This keeps CI behavior predictable and is a good base for later tasks.
           if printf '%s\n' "$changed_files" | grep -Eq '^(\.github/|checkstyle/)'; then
             build_all=true
+            reasons+=("shared build config changed (.github/ or checkstyle/)")
           fi
 
           mapfile -t top_level_dirs < <(
@@ -80,6 +86,7 @@ jobs:
           for top_level_dir in "${top_level_dirs[@]}"; do
             if [[ "$top_level_dir" == "common-library" ]]; then
               build_all=true
+              reasons+=("common-library changed")
             elif [[ -f "$top_level_dir/pom.xml" ]]; then
               if printf '%s\n' "${reactor_modules[@]}" | grep -qx "$top_level_dir"; then
                 services+=("$top_level_dir")
@@ -90,6 +97,14 @@ jobs:
           if [[ "$build_all" == "true" ]]; then
             services=("${reactor_modules[@]}")
           fi
+
+          if [[ "$build_all" == "true" ]]; then
+            echo "build_all=true (reasons: ${reasons[*]:-n/a})" >&2
+          else
+            echo "build_all=false (selected services derived from changed folders)" >&2
+          fi
+
+          echo "Selected services (${#services[@]}): ${services[*]}" >&2
 
           if [[ ${#services[@]} -eq 0 ]]; then
             echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
