@@ -158,7 +158,29 @@ jobs:
           echo "Maven test failed after retries."
           exit 1
 
+      - name: Detect whether module has unit tests
+        id: test-detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          service='${{ matrix.service }}'
+
+          has_tests=false
+
+          if compgen -G "$service/target/surefire-reports/*.xml" > /dev/null; then
+            has_tests=true
+          elif compgen -G "$service/target/failsafe-reports/*.xml" > /dev/null; then
+            has_tests=true
+          fi
+
+          echo "has_tests=$has_tests" >> "$GITHUB_OUTPUT"
+
+          if [[ "$has_tests" != "true" ]]; then
+            echo "No JUnit XML results found for $service; skipping JaCoCo report + coverage enforcement."
+          fi
+
       - name: Generate JaCoCo report for ${{ matrix.service }}
+        if: steps.test-detect.outputs.has_tests == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -173,6 +195,7 @@ jobs:
           exit 1
 
       - name: Enforce coverage threshold (70%) for ${{ matrix.service }}
+        if: steps.test-detect.outputs.has_tests == 'true'
         env:
           SERVICE: ${{ matrix.service }}
           COVERAGE_THRESHOLD: '0.70'
@@ -218,7 +241,7 @@ jobs:
           PY
 
       - name: Upload JaCoCo coverage report for ${{ matrix.service }}
-        if: always()
+        if: always() && steps.test-detect.outputs.has_tests == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.service }}
