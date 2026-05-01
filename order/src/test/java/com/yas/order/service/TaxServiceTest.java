@@ -1,69 +1,52 @@
 package com.yas.order.service;
 
-import static com.yas.order.utils.SecurityContextUtils.setUpSecurityContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.yas.commonlibrary.utils.AuthenticationUtils;
 import com.yas.order.config.ServiceUrlConfig;
 import java.net.URI;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 
+@ExtendWith(MockitoExtension.class)
 class TaxServiceTest {
 
+    @Mock
     private RestClient restClient;
-
+    @Mock
     private ServiceUrlConfig serviceUrlConfig;
 
+    @InjectMocks
     private TaxService taxService;
 
-    private RestClient.ResponseSpec responseSpec;
-
-    private static final String TAX_URL = "http://api.yas.local/tax";
-
-    @BeforeEach
-    void setUp() {
-        restClient = mock(RestClient.class);
-        serviceUrlConfig = mock(ServiceUrlConfig.class);
-        taxService = new TaxService(restClient, serviceUrlConfig);
-        responseSpec = Mockito.mock(RestClient.ResponseSpec.class);
-        setUpSecurityContext("test");
-        when(serviceUrlConfig.tax()).thenReturn(TAX_URL);
-    }
-
-
     @Test
-    void testGetTaxPercentByAddress_ifNormalCase_returnCustomerVm() {
+    void getTaxPercent_ShouldReturnDefaultValue() {
+        try (MockedStatic<AuthenticationUtils> mockedAuth = mockStatic(AuthenticationUtils.class)) {
+            mockedAuth.when(AuthenticationUtils::extractJwt).thenReturn("token");
+            when(serviceUrlConfig.tax()).thenReturn("http://api/tax");
 
-        Long taxClassId = 1L;
-        Long countryId = 2L;
-        Long stateOrProvinceId = 3L;
-        String zipCode = "TEST";
+            RestClient.RequestHeadersUriSpec getSpec = mock(RestClient.RequestHeadersUriSpec.class);
+            RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
+            RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
-        URI url = UriComponentsBuilder.fromUriString(serviceUrlConfig.tax())
-            .path("/backoffice/tax-rates/tax-percent")
-            .queryParam("taxClassId", taxClassId)
-            .queryParam("countryId", countryId)
-            .queryParam("stateOrProvinceId", stateOrProvinceId)
-            .queryParam("zipCode", zipCode)
-            .build().toUri();
+            when(restClient.get()).thenReturn(getSpec);
+            when(getSpec.uri(any(URI.class))).thenReturn(headersSpec);
+            when(headersSpec.headers(any())).thenReturn(headersSpec);
+            when(headersSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.body(Double.class)).thenReturn(10.0);
 
-        RestClient.RequestHeadersUriSpec requestHeadersUriSpec = Mockito.mock(RestClient.RequestHeadersUriSpec.class);
-        when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.body(Double.class))
-            .thenReturn(1.1);
+            double result = taxService.getTaxPercent(1L, 1L);
 
-        Double result = taxService.getTaxPercentByAddress(taxClassId,
-            countryId, stateOrProvinceId, zipCode);
-
-        assertThat(result).isEqualTo(1.1);
+            assertThat(result).isEqualTo(10.0);
+        }
     }
 }

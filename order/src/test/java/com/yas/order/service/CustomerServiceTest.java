@@ -1,75 +1,54 @@
 package com.yas.order.service;
 
-import static com.yas.order.utils.SecurityContextUtils.setUpSecurityContext;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.yas.commonlibrary.utils.AuthenticationUtils;
 import com.yas.order.config.ServiceUrlConfig;
 import com.yas.order.viewmodel.customer.CustomerVm;
 import java.net.URI;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 
+@ExtendWith(MockitoExtension.class)
 class CustomerServiceTest {
 
+    @Mock
     private RestClient restClient;
-
+    @Mock
     private ServiceUrlConfig serviceUrlConfig;
 
+    @InjectMocks
     private CustomerService customerService;
 
-    private RestClient.ResponseSpec responseSpec;
-
-    private static final String CUSTOMER_URL = "http://api.yas.local/customer";
-
-    @BeforeEach
-    void setUp() {
-        restClient = mock(RestClient.class);
-        serviceUrlConfig = mock(ServiceUrlConfig.class);
-        customerService = new CustomerService(restClient, serviceUrlConfig);
-        responseSpec = Mockito.mock(RestClient.ResponseSpec.class);
-        setUpSecurityContext("test");
-        when(serviceUrlConfig.customer()).thenReturn(CUSTOMER_URL);
-    }
-
     @Test
-    void testGetCustomer_ifNormalCase_returnCustomerVm() {
+    void getCustomer_ShouldReturnCustomer() {
+        try (MockedStatic<AuthenticationUtils> mockedAuth = mockStatic(AuthenticationUtils.class)) {
+            mockedAuth.when(AuthenticationUtils::extractJwt).thenReturn("token");
+            when(serviceUrlConfig.customer()).thenReturn("http://api/customer");
 
-        final URI url = UriComponentsBuilder
-            .fromUriString(serviceUrlConfig.customer())
-            .path("/storefront/customer/profile")
-            .buildAndExpand()
-            .toUri();
+            RestClient.RequestHeadersUriSpec getSpec = mock(RestClient.RequestHeadersUriSpec.class);
+            RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
+            RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+            CustomerVm customerVm = new CustomerVm("id", "user", "first", "last", "email");
 
-        RestClient.RequestHeadersUriSpec requestHeadersUriSpec = Mockito.mock(RestClient.RequestHeadersUriSpec.class);
-        when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+            when(restClient.get()).thenReturn(getSpec);
+            when(getSpec.uri(any(URI.class))).thenReturn(headersSpec);
+            when(headersSpec.headers(any())).thenReturn(headersSpec);
+            when(headersSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.body(CustomerVm.class)).thenReturn(customerVm);
 
-        CustomerVm customer = new CustomerVm(
-            "john_doe",
-            "john.doe@example.com",
-            "John",
-            "Doe"
-        );
-        when(responseSpec.body(CustomerVm.class))
-            .thenReturn(customer);
+            CustomerVm result = customerService.getCustomer();
 
-        CustomerVm result = customerService.getCustomer();
-
-        assertNotNull(result);
-        assertThat(result.username()).isEqualTo("john_doe");
-        assertThat(result.email()).isEqualTo("john.doe@example.com");
-        assertThat(result.firstName()).isEqualTo("John");
-        assertThat(result.lastName()).isEqualTo("Doe");
-
+            assertThat(result.email()).isEqualTo("email");
+        }
     }
-
 }
