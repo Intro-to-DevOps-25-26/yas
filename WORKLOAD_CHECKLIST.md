@@ -7,7 +7,7 @@
 ### 1.1 Fork & repo settings
 - [x] Fork repository từ https://github.com/nashtech-garage/yas
 - [x] Clone repo về local
-- [ ] Tạo branch `develop` từ `main`
+- [x] Tạo branch `develop` từ `main`
 - [x] Cấu hình rules/branch protection cho `main`:
   - [x] Require a pull request before merging
   - [x] Require 2 approvals before merging
@@ -87,11 +87,11 @@ Ghi chú trạng thái hiện tại:
 ## Task 4 — Unit tests theo service (nâng coverage)
 
 ### 4.1 Branch theo service
-- [ ] Tạo branch `feature/add-unit-tests-<service>` cho từng service được phân công
+- [x] Tạo branch `feature/add-unit-tests-<service>` cho từng service được phân công
 
 ### 4.2 Viết unit tests
-- [ ] Thêm test cases vào `src/test/java/**`
-- [ ] Coverage đạt ≥ 70% cho service được phân công
+- [x] Thêm test cases vào `src/test/java/**`
+- [x] Coverage đạt ≥ 70% cho service được phân công
 - [ ] CI pass: `CI Gate` + coverage + security (nếu đã bật)
 
 ### 4.3 PR & review flow

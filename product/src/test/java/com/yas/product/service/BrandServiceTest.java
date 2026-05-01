@@ -1,11 +1,14 @@
 package com.yas.product.service;
 
+import com.yas.commonlibrary.exception.BadRequestException;
 import com.yas.commonlibrary.exception.DuplicatedException;
 import com.yas.commonlibrary.exception.NotFoundException;
 import com.yas.product.model.Brand;
+import com.yas.product.model.Product;
 import com.yas.product.repository.BrandRepository;
 import com.yas.product.viewmodel.brand.BrandListGetVm;
 import com.yas.product.viewmodel.brand.BrandPostVm;
+import com.yas.product.viewmodel.brand.BrandVm;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,11 +19,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -105,5 +112,70 @@ class BrandServiceTest {
         Assertions.assertThrows(NotFoundException.class, () -> {
             brandService.update(brandPostVm, 1L);
         });
+    }
+
+    @Test
+    void testGetBrandsByIds_Successfully() {
+        Brand brand1 = new Brand();
+        brand1.setId(1L);
+        brand1.setName("Brand 1");
+
+        Brand brand2 = new Brand();
+        brand2.setId(2L);
+        brand2.setName("Brand 2");
+
+        when(brandRepository.findAllById(List.of(1L, 2L))).thenReturn(List.of(brand1, brand2));
+
+        List<BrandVm> result = brandService.getBrandsByIds(List.of(1L, 2L));
+
+        assertEquals(2, result.size());
+        assertEquals("Brand 1", result.get(0).name());
+    }
+
+    @Test
+    void testDeleteBrand_Successfully() {
+        Brand brand = new Brand();
+        brand.setId(1L);
+        brand.setName("Test Brand");
+        brand.setProducts(List.of());
+
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+
+        brandService.delete(1L);
+
+        verify(brandRepository).deleteById(1L);
+    }
+
+    @Test
+    void testDeleteBrand_NotFound_ThrowsNotFoundException() {
+        when(brandRepository.findById(1L)).thenReturn(Optional.empty());
+
+        Assertions.assertThrows(NotFoundException.class, () -> brandService.delete(1L));
+    }
+
+    @Test
+    void testDeleteBrand_WithProducts_ThrowsBadRequestException() {
+        Brand brand = new Brand();
+        brand.setId(1L);
+        brand.setName("Test Brand");
+
+        Product product = new Product();
+        product.setId(1L);
+        brand.setProducts(List.of(product));
+
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+
+        Assertions.assertThrows(BadRequestException.class, () -> brandService.delete(1L));
+    }
+
+    @Test
+    void testGetBrands_EmptyList() {
+        Page<Brand> emptyPage = new PageImpl<>(List.of());
+        when(brandRepository.findAll(any(Pageable.class))).thenReturn(emptyPage);
+
+        BrandListGetVm result = brandService.getBrands(0, 10);
+
+        assertNotNull(result);
+        assertTrue(result.brandContent().isEmpty());
     }
 }
