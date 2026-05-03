@@ -67,6 +67,7 @@ jobs:
             echo "ERROR: head_sha $head_sha not found" >&2
             exit 1
           fi
+
           
           changed_files="$(git diff --name-only "$base_sha" "$head_sha" || true)"
           build_all=false
