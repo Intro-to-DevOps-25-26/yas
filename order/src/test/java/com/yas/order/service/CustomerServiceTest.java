@@ -38,7 +38,7 @@ class CustomerServiceTest {
             RestClient.RequestHeadersUriSpec getSpec = mock(RestClient.RequestHeadersUriSpec.class);
             RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
             RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
-            CustomerVm customerVm = new CustomerVm("id", "user", "first", "last", "email");
+            CustomerVm customerVm = new CustomerVm("user", "email", "first", "last");
 
             when(restClient.get()).thenReturn(getSpec);
             when(getSpec.uri(any(URI.class))).thenReturn(headersSpec);

@@ -44,7 +44,7 @@ class TaxServiceTest {
             when(headersSpec.retrieve()).thenReturn(responseSpec);
             when(responseSpec.body(Double.class)).thenReturn(10.0);
 
-            double result = taxService.getTaxPercent(1L, 1L);
+            double result = taxService.getTaxPercentByAddress(1L, 1L, 1L, "zip");
 
             assertThat(result).isEqualTo(10.0);
         }

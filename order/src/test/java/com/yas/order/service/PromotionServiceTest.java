@@ -36,20 +36,20 @@ class PromotionServiceTest {
             mockedAuth.when(AuthenticationUtils::extractJwt).thenReturn("token");
             when(serviceUrlConfig.promotion()).thenReturn("http://api/promotion");
 
-            RestClient.RequestBodyUriSpec putSpec = mock(RestClient.RequestBodyUriSpec.class);
+            RestClient.RequestBodyUriSpec postSpec = mock(RestClient.RequestBodyUriSpec.class);
             RestClient.RequestBodySpec bodySpec = mock(RestClient.RequestBodySpec.class);
             RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
             RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
-            when(restClient.put()).thenReturn(putSpec);
-            when(putSpec.uri(any(URI.class))).thenReturn(bodySpec);
-            when(bodySpec.headers(any(Consumer.class))).thenReturn(bodySpec);
-            when(bodySpec.body(any(Object.class))).thenReturn(headersSpec);
+            when(restClient.post()).thenReturn(postSpec);
+            when(postSpec.uri(any(URI.class))).thenReturn(bodySpec);
+            when(bodySpec.headers(any())).thenReturn(bodySpec);
+            when(bodySpec.body(any(List.class))).thenReturn(headersSpec);
             when(headersSpec.retrieve()).thenReturn(responseSpec);
 
-            promotionService.updateUsagePromotion(PromotionUsageVm.builder().build());
+            promotionService.updateUsagePromotion(List.of(PromotionUsageVm.builder().build()));
 
-            verify(restClient).put();
+            verify(restClient).post();
         }
     }
 }

@@ -17,10 +17,12 @@ import com.yas.order.viewmodel.checkout.CheckoutStatusPutVm;
 import com.yas.order.viewmodel.checkout.CheckoutVm;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,32 +36,41 @@ class CheckoutServiceTest {
     private OrderService orderService;
     @Mock
     private ProductService productService;
+    @Mock
+    private com.yas.order.mapper.CheckoutMapper checkoutMapper;
 
     @InjectMocks
     private CheckoutService checkoutService;
 
     @Test
     void getCheckoutWithItemsById_WhenExists_ShouldReturnVm() {
-        Checkout checkout = Checkout.builder().id("123").email("test@test.com").build();
-        when(checkoutRepository.findById("123")).thenReturn(Optional.of(checkout));
-        when(checkoutItemRepository.findAllByCheckoutId("123")).thenReturn(Collections.emptyList());
+        Checkout checkout = Checkout.builder().id("123").email("test@test.com").createdBy("user").build();
+        when(checkoutRepository.findByIdAndCheckoutState("123", CheckoutState.PENDING)).thenReturn(Optional.of(checkout));
+        try (MockedStatic<com.yas.commonlibrary.utils.AuthenticationUtils> mockedAuth = mockStatic(com.yas.commonlibrary.utils.AuthenticationUtils.class)) {
+            mockedAuth.when(com.yas.commonlibrary.utils.AuthenticationUtils::extractUserId).thenReturn("user");
+            when(checkoutMapper.toVm(any())).thenReturn(CheckoutVm.builder().id("123").email("test@test.com").build());
 
-        CheckoutVm result = checkoutService.getCheckoutWithItemsById("123");
+            CheckoutVm result = checkoutService.getCheckoutPendingStateWithItemsById("123");
 
-        assertThat(result.id()).isEqualTo("123");
-        assertThat(result.email()).isEqualTo("test@test.com");
+            assertThat(result.id()).isEqualTo("123");
+            assertThat(result.email()).isEqualTo("test@test.com");
+        }
     }
 
     @Test
     void updateCheckoutStatus_ShouldSave() {
-        Checkout checkout = Checkout.builder().id("123").build();
+        Checkout checkout = Checkout.builder().id("123").createdBy("user").build();
         when(checkoutRepository.findById("123")).thenReturn(Optional.of(checkout));
-        
-        CheckoutStatusPutVm statusPutVm = new CheckoutStatusPutVm("COMPLETED");
-        checkoutService.updateCheckoutStatus("123", statusPutVm);
+        try (MockedStatic<com.yas.commonlibrary.utils.AuthenticationUtils> mockedAuth = mockStatic(com.yas.commonlibrary.utils.AuthenticationUtils.class)) {
+            mockedAuth.when(com.yas.commonlibrary.utils.AuthenticationUtils::extractUserId).thenReturn("user");
+            when(orderService.findOrderByCheckoutId("123")).thenReturn(com.yas.order.model.Order.builder().id(1L).build());
 
-        assertThat(checkout.getCheckoutState()).isEqualTo(CheckoutState.COMPLETED);
-        verify(checkoutRepository).save(checkout);
+            CheckoutStatusPutVm statusPutVm = new CheckoutStatusPutVm("123", "COMPLETED");
+            checkoutService.updateCheckoutStatus(statusPutVm);
+
+            assertThat(checkout.getCheckoutState()).isEqualTo(CheckoutState.COMPLETED);
+            verify(checkoutRepository).save(checkout);
+        }
     }
 
     @Test

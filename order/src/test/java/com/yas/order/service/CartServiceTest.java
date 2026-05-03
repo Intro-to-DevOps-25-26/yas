@@ -9,9 +9,11 @@ import static org.mockito.Mockito.when;
 
 import com.yas.commonlibrary.utils.AuthenticationUtils;
 import com.yas.order.config.ServiceUrlConfig;
-import com.yas.order.viewmodel.cart.CartItemDeleteVm;
+import com.yas.order.viewmodel.order.OrderItemVm;
+import com.yas.order.viewmodel.order.OrderVm;
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,18 +39,23 @@ class CartServiceTest {
             mockedAuth.when(AuthenticationUtils::extractJwt).thenReturn("token");
             when(serviceUrlConfig.cart()).thenReturn("http://api/cart");
 
-            RestClient.RequestHeadersUriSpec deleteSpec = mock(RestClient.RequestHeadersUriSpec.class);
+            RestClient.RequestBodyUriSpec postSpec = mock(RestClient.RequestBodyUriSpec.class);
+            RestClient.RequestBodySpec bodySpec = mock(RestClient.RequestBodySpec.class);
             RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
             RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
-            when(restClient.delete()).thenReturn(deleteSpec);
-            when(deleteSpec.uri(any(URI.class))).thenReturn(headersSpec);
-            when(headersSpec.headers(any())).thenReturn(headersSpec);
+            when(restClient.post()).thenReturn(postSpec);
+            when(postSpec.uri(any(URI.class))).thenReturn(bodySpec);
+            when(bodySpec.headers(any())).thenReturn(bodySpec);
+            when(bodySpec.body(any(List.class))).thenReturn(headersSpec);
             when(headersSpec.retrieve()).thenReturn(responseSpec);
 
-            cartService.deleteCartItems(List.of(new CartItemDeleteVm(1L)));
+            OrderVm orderVm = OrderVm.builder()
+                .orderItemVms(Set.of(OrderItemVm.builder().productId(1L).quantity(1).build()))
+                .build();
+            cartService.deleteCartItems(orderVm);
 
-            verify(restClient).delete();
+            verify(restClient).post();
         }
     }
 }
