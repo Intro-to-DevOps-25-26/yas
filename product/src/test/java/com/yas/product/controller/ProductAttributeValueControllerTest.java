@@ -1,7 +1,7 @@
 package com.yas.product.controller;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.mockito.Mockito.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -131,5 +131,38 @@ class ProductAttributeValueControllerTest {
 
         mockMvc.perform(delete("/backoffice/product-attribute-value/{id}", id))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testCreateProductAttributeValue_ProductNotFound() throws Exception {
+        ProductAttributeValuePostVm postVm = new ProductAttributeValuePostVm(999L, 1L, "Red");
+
+        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/backoffice/product-attribute-value")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(postVm)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testDeleteProductAttributeValue_NotFound() throws Exception {
+        Long id = 999L;
+        when(productAttributeValueRepository.findById(id)).thenReturn(Optional.empty());
+
+        mockMvc.perform(delete("/backoffice/product-attribute-value/{id}", id))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testUpdateProductAttributeValue_NotFound() throws Exception {
+        Long id = 999L;
+        ProductAttributeValuePostVm postVm = new ProductAttributeValuePostVm(1L, 1L, "Blue");
+        when(productAttributeValueRepository.findById(id)).thenReturn(Optional.empty());
+
+        mockMvc.perform(put("/backoffice/product-attribute-value/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(postVm)))
+                .andExpect(status().isNotFound());
     }
 }

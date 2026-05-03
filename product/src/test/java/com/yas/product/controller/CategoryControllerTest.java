@@ -1,8 +1,10 @@
 package com.yas.product.controller;
 
+import com.yas.commonlibrary.exception.BadRequestException;
 import com.yas.product.model.Category;
 import com.yas.product.repository.CategoryRepository;
 import com.yas.product.service.CategoryService;
+import com.yas.product.utils.Constants;
 import com.yas.product.viewmodel.ImageVm;
 import com.yas.product.viewmodel.category.CategoryGetDetailVm;
 import com.yas.product.viewmodel.category.CategoryGetVm;
@@ -20,11 +22,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -140,6 +146,55 @@ class CategoryControllerTest {
         category.setName("Electronic");
         category.setDescription("electronics, gadgets, technology");
         category.setDisplayOrder((short) 1);
+        category.setCategories(Collections.emptyList());
+        category.setProductCategories(Collections.emptyList());
         return category;
+    }
+
+    @Test
+    void testListTopNthCategories() throws Exception {
+        when(categoryService.getTopNthCategories(5)).thenReturn(List.of("Electronics", "Clothing", "Food"));
+
+        mockMvc.perform(get("/storefront/categories/suggestions")
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0]").value("Electronics"));
+    }
+
+    @Test
+    void testGetCategoriesByIds() throws Exception {
+        List<CategoryGetVm> categoryVms = List.of(
+                new CategoryGetVm(1L, "Electronics", "electronics", 1L, new ImageVm(1L, "url1")),
+                new CategoryGetVm(2L, "Clothing", "clothing", 1L, new ImageVm(2L, "url2"))
+        );
+        when(categoryService.getCategoryByIds(List.of(1L, 2L))).thenReturn(categoryVms);
+
+        mockMvc.perform(get("/backoffice/categories/by-ids")
+                        .param("ids", "1", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[1].name").value("Clothing"));
+    }
+
+    @Test
+    void testDeleteCategoryWithChildren() throws Exception {
+        Category category = createCategory();
+        category.setCategories(List.of(new Category()));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        mockMvc.perform(delete("/backoffice/categories/1"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testDeleteCategoryWithProducts() throws Exception {
+        Category category = createCategory();
+        category.setProductCategories(List.of());
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        mockMvc.perform(delete("/backoffice/categories/1"))
+                .andExpect(status().isNoContent());
     }
 }
