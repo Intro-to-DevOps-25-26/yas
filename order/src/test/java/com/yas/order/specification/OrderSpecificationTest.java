@@ -38,6 +38,7 @@ class OrderSpecificationTest {
         
         // Default stubs to avoid NPEs in many tests
         when(root.get(anyString())).thenReturn(mock(Path.class));
+        when(root.fetch(anyString(), any())).thenReturn(mock(jakarta.persistence.criteria.Fetch.class));
         when(cb.equal(any(), any())).thenReturn(predicate);
         when(cb.like(any(), anyString())).thenReturn(predicate);
         when(cb.and(any(Predicate[].class))).thenReturn(predicate);

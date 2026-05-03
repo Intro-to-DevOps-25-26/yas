@@ -72,15 +72,13 @@ class ProductServiceTest {
 
             RestClient.RequestBodyUriSpec putSpec = mock(RestClient.RequestBodyUriSpec.class);
             RestClient.RequestBodySpec bodySpec = mock(RestClient.RequestBodySpec.class);
-            RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
             RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
             when(restClient.put()).thenReturn(putSpec);
             when(putSpec.uri(any(URI.class))).thenReturn(bodySpec);
-            when(bodySpec.headers(any(Consumer.class))).thenReturn(bodySpec);
-            // Use doReturn with explicit return type match for the overloaded body method
-            doReturn(headersSpec).when(bodySpec).body(any(Object.class));
-            when(headersSpec.retrieve()).thenReturn(responseSpec);
+            when(bodySpec.headers(any())).thenReturn(bodySpec);
+            when(bodySpec.body(any())).thenReturn(bodySpec);
+            when(bodySpec.retrieve()).thenReturn(responseSpec);
 
             OrderVm orderVm = OrderVm.builder().orderItemVms(Collections.emptySet()).build();
             productService.subtractProductStockQuantity(orderVm);

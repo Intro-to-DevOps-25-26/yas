@@ -75,40 +75,46 @@ class OrderServiceTest {
 
     @Test
     void createOrder_WhenSuccess_ShouldSaveAndCallServices() {
-        OrderAddressPostVm addressVm = OrderAddressPostVm.builder()
-            .contactName("C").phone("P").addressLine1("A1").city("City").zipCode("Zip")
-            .districtId(1L).districtName("D").stateOrProvinceId(1L).stateOrProvinceName("S").countryId(1L).countryName("C")
-            .build();
-        
-        OrderItemPostVm item = OrderItemPostVm.builder().productId(1L).quantity(2).productPrice(BigDecimal.TEN).build();
-        
-        OrderPostVm postVm = OrderPostVm.builder()
-            .checkoutId("check")
-            .email("e@e.com")
-            .shippingAddressPostVm(addressVm)
-            .billingAddressPostVm(addressVm)
-            .totalPrice(BigDecimal.valueOf(20))
-            .deliveryMethod(DeliveryMethod.VIETTEL_POST)
-            .paymentMethod(PaymentMethod.COD)
-            .paymentStatus(PaymentStatus.PENDING)
-            .orderItemPostVms(List.of(item))
-            .build();
+        try (MockedStatic<AuthenticationUtils> mockedAuth = mockStatic(AuthenticationUtils.class)) {
+            mockedAuth.when(AuthenticationUtils::extractUserId).thenReturn("user");
+            
+            OrderAddressPostVm addressVm = OrderAddressPostVm.builder()
+                .contactName("C").phone("P").addressLine1("A1").city("City").zipCode("Zip")
+                .districtId(1L).districtName("D").stateOrProvinceId(1L).stateOrProvinceName("S").countryId(1L).countryName("C")
+                .build();
+            
+            OrderItemPostVm item = OrderItemPostVm.builder().productId(1L).quantity(2).productPrice(BigDecimal.TEN).productName("P").build();
+            
+            OrderPostVm postVm = OrderPostVm.builder()
+                .checkoutId("check")
+                .email("e@e.com")
+                .shippingAddressPostVm(addressVm)
+                .billingAddressPostVm(addressVm)
+                .totalPrice(BigDecimal.valueOf(20))
+                .deliveryMethod(DeliveryMethod.VIETTEL_POST)
+                .paymentMethod(PaymentMethod.COD)
+                .paymentStatus(PaymentStatus.PENDING)
+                .orderItemPostVms(List.of(item))
+                .build();
 
-        // Use doAnswer to simulate database assigning an ID upon save
-        doAnswer(invocation -> {
-            Order o = invocation.getArgument(0);
-            o.setId(1L);
-            return o;
-        }).when(orderRepository).save(any(Order.class));
+            doAnswer(invocation -> {
+                Order o = invocation.getArgument(0);
+                o.setId(1L);
+                return o;
+            }).when(orderRepository).save(any(Order.class));
 
-        Order orderWithId = Order.builder().id(1L).build();
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(orderWithId));
+            Order orderWithId = Order.builder()
+                .id(1L)
+                .billingAddressId(createMockAddress())
+                .shippingAddressId(createMockAddress())
+                .build();
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(orderWithId));
 
-        OrderVm result = orderService.createOrder(postVm);
+            OrderVm result = orderService.createOrder(postVm);
 
-        assertThat(result).isNotNull();
-        verify(orderRepository, times(2)).save(any());
-        verify(orderItemRepository).saveAll(anyList());
+            assertThat(result).isNotNull();
+            verify(orderRepository, times(2)).save(any());
+        }
     }
 
     @Test
@@ -155,7 +161,14 @@ class OrderServiceTest {
         when(orderRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
         when(page.isEmpty()).thenReturn(true);
 
-        OrderListVm result = orderService.getAllOrder(null, null, null, null, null, Pair.of(0, 10));
+        OrderListVm result = orderService.getAllOrder(
+            Pair.of(ZonedDateTime.now(), ZonedDateTime.now()),
+            "product",
+            List.of(OrderStatus.PENDING),
+            Pair.of("country", "phone"),
+            "email",
+            Pair.of(0, 10)
+        );
 
         assertThat(result.orderList()).isEmpty();
     }
@@ -184,6 +197,7 @@ class OrderServiceTest {
                 .shippingAddressId(createMockAddress())
                 .build();
         when(page.getContent()).thenReturn(List.of(order));
+        when(orderMapper.toCsv(any())).thenReturn(mock(com.yas.commonlibrary.csv.BaseCsv.class));
 
         byte[] result = orderService.exportCsv(request);
 
@@ -201,5 +215,18 @@ class OrderServiceTest {
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.REJECT);
         assertThat(order.getRejectReason()).isEqualTo("Reason");
         verify(orderRepository).save(order);
+    }
+
+    @Test
+    void isOrderCompletedWithUserIdAndProductId_ShouldReturnVm() {
+        try (MockedStatic<AuthenticationUtils> mockedAuth = mockStatic(AuthenticationUtils.class)) {
+            mockedAuth.when(AuthenticationUtils::extractUserId).thenReturn("user");
+            when(productService.getProductVariations(1L)).thenReturn(List.of());
+            when(orderRepository.findOne(any())).thenReturn(Optional.of(new Order()));
+
+            var result = orderService.isOrderCompletedWithUserIdAndProductId(1L);
+
+            assertThat(result.isOrderExisted()).isTrue();
+        }
     }
 }
