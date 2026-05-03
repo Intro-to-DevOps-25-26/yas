@@ -1,5 +1,6 @@
 package com.yas.product.controller;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -83,5 +84,14 @@ class ProductOptionValueControllerTest {
         when(productRepository.findById(2L)).thenReturn(Optional.empty());
         mockMvc.perform(get("/storefront/product-option-values/2"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testListProductOptionValues_empty() throws Exception {
+        when(productOptionValueRepository.findAll()).thenReturn(List.of());
+
+        mockMvc.perform(get("/backoffice/product-option-values"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 }
