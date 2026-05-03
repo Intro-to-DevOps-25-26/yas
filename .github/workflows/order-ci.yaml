@@ -53,8 +53,9 @@ jobs:
       - name: Analyze with sonar cloud
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f order
+        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f order -Dsonar.organization=intro-to-devops-25-26 -Dsonar.projectKey=intro-to-devops-25-26_yas-order
       - name: OWASP Dependency Check
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: dependency-check/Dependency-Check_Action@main

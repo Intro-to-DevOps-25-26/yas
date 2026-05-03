@@ -73,6 +73,8 @@ jobs:
           build_all=false
           reasons=()
 
+
+          
           if [[ -z "$changed_files" ]]; then
             echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
             echo 'has_services=false' >> "$GITHUB_OUTPUT"

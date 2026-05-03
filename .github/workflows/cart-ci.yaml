@@ -68,8 +68,9 @@ jobs:
       - name: Analyze with sonar cloud
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -pl cart -am
+        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -pl cart -am -Dsonar.organization=intro-to-devops-25-26 -Dsonar.projectKey=intro-to-devops-25-26_yas-cart
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
