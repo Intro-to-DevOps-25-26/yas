@@ -17,6 +17,7 @@ import com.yas.order.mapper.OrderMapper;
 import com.yas.order.model.Order;
 import com.yas.order.model.OrderAddress;
 import com.yas.order.model.OrderItem;
+import com.yas.order.model.csv.OrderItemCsv;
 import com.yas.order.model.enumeration.DeliveryMethod;
 import com.yas.order.model.enumeration.OrderStatus;
 import com.yas.order.model.enumeration.PaymentMethod;
@@ -197,7 +198,7 @@ class OrderServiceTest {
                 .shippingAddressId(createMockAddress())
                 .build();
         when(page.getContent()).thenReturn(List.of(order));
-        when(orderMapper.toCsv(any())).thenReturn(mock(com.yas.commonlibrary.csv.BaseCsv.class));
+        when(orderMapper.toCsv(any())).thenReturn(mock(OrderItemCsv.class));
 
         byte[] result = orderService.exportCsv(request);
 
@@ -222,11 +223,11 @@ class OrderServiceTest {
         try (MockedStatic<AuthenticationUtils> mockedAuth = mockStatic(AuthenticationUtils.class)) {
             mockedAuth.when(AuthenticationUtils::extractUserId).thenReturn("user");
             when(productService.getProductVariations(1L)).thenReturn(List.of());
-            when(orderRepository.findOne(any())).thenReturn(Optional.of(new Order()));
+            when(orderRepository.findOne(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(Optional.of(new Order()));
 
             var result = orderService.isOrderCompletedWithUserIdAndProductId(1L);
 
-            assertThat(result.isOrderExisted()).isTrue();
+            assertThat(result.isPresent()).isTrue();
         }
     }
 }

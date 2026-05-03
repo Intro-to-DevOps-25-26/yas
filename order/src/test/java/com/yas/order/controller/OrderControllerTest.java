@@ -17,7 +17,6 @@ import com.yas.order.viewmodel.order.PaymentOrderStatusVm;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -25,7 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
-@WebMvcTest(controllers = OrderController.class, excludeAutoConfiguration = OAuth2ResourceServerAutoConfiguration.class)
+@WebMvcTest(controllers = OrderController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class OrderControllerTest {
 
