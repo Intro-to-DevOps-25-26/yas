@@ -87,6 +87,7 @@ jobs:
           fi
 
           # If shared build config changes, run CI for all modules.
+          
           # This keeps CI behavior predictable and is a good base for later tasks.
           if printf '%s\n' "$changed_files" | grep -Eq '^(\.github/|checkstyle/)'; then
             build_all=true
