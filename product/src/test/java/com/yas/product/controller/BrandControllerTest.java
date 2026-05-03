@@ -1,9 +1,14 @@
 package com.yas.product.controller;
 
+import com.yas.commonlibrary.exception.BadRequestException;
 import com.yas.product.model.Brand;
+import com.yas.product.model.Product;
 import com.yas.product.repository.BrandRepository;
 import com.yas.product.service.BrandService;
+import com.yas.product.utils.Constants;
+import com.yas.product.viewmodel.brand.BrandListGetVm;
 import com.yas.product.viewmodel.brand.BrandPostVm;
+import com.yas.product.viewmodel.brand.BrandVm;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +23,13 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -123,4 +131,49 @@ class BrandControllerTest {
         brand.setProducts(Collections.emptyList());
         return brand;
     }
+
+    @Test
+    void testGetPageableBrands() throws Exception {
+        BrandListGetVm brandList = new BrandListGetVm(
+                List.of(new BrandVm(1L, "Brand 1", "brand-1", true), new BrandVm(2L, "Brand 2", "brand-2", true)),
+                0, 10, 2, 1, true
+        );
+        when(brandService.getBrands(0, 10)).thenReturn(brandList);
+
+        mockMvc.perform(get("/backoffice/brands/paging")
+                        .param("pageNo", "0")
+                        .param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.brandContent").isArray())
+                .andExpect(jsonPath("$.brandContent[0].name").value("Brand 1"));
+    }
+
+    @Test
+    void testGetBrandsByIds() throws Exception {
+        List<BrandVm> brandVms = List.of(
+                new BrandVm(1L, "Brand 1", "brand-1", true),
+                new BrandVm(2L, "Brand 2", "brand-2", true)
+        );
+        when(brandService.getBrandsByIds(List.of(1L, 2L))).thenReturn(brandVms);
+
+        mockMvc.perform(get("/backoffice/brands/by-ids")
+                        .param("ids", "1", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[1].name").value("Brand 2"));
+    }
+
+    @Test
+    void testDeleteBrandWhenBrandHasProducts() throws Exception {
+        Brand brand = createBrand(1L, "Brand with products");
+        brand.setProducts(List.of(new Product()));
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+        doThrow(new BadRequestException(Constants.ErrorCode.MAKE_SURE_BRAND_DONT_CONTAINS_ANY_PRODUCT))
+                .when(brandService).delete(1L);
+
+        mockMvc.perform(delete("/backoffice/brands/1"))
+                .andExpect(status().isBadRequest());
+    }
 }
+

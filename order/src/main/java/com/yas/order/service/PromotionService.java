@@ -1,5 +1,6 @@
 package com.yas.order.service;
 
+import com.yas.commonlibrary.utils.AuthenticationUtils;
 import com.yas.order.config.ServiceUrlConfig;
 import com.yas.order.viewmodel.promotion.PromotionUsageVm;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -7,8 +8,6 @@ import io.github.resilience4j.retry.annotation.Retry;
 import java.net.URI;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -23,8 +22,7 @@ public class PromotionService extends AbstractCircuitBreakFallbackHandler {
     @Retry(name = "restApi")
     @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handleBodilessFallback")
     public void updateUsagePromotion(List<PromotionUsageVm> promotionUsageVms) {
-        final String jwt = ((Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal())
-                .getTokenValue();
+        final String jwt = AuthenticationUtils.extractJwt();
         final URI url = UriComponentsBuilder
                 .fromUriString(serviceUrlConfig.promotion())
                 .path("/backoffice/promotions/updateUsage")

@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -131,5 +132,26 @@ class ProductAttributeGroupControllerTest {
         productAttributeGroup.setId(id);
         productAttributeGroup.setName(name);
         return productAttributeGroup;
+    }
+
+    @Test
+    void testDeleteProductAttributeGroup_NotFound() throws Exception {
+        Mockito.when(productAttributeGroupRepository.findById(999L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(delete("/backoffice/product-attribute-groups/999")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testDeleteProductAttributeGroup_DataIntegrityViolation() throws Exception {
+        ProductAttributeGroup group = createProductAttributeGroup(1L, "Color");
+        Mockito.when(productAttributeGroupRepository.findById(1L)).thenReturn(Optional.of(group));
+        Mockito.doThrow(new DataIntegrityViolationException("FK constraint violation"))
+                .when(productAttributeGroupRepository).deleteById(1L);
+
+        mockMvc.perform(delete("/backoffice/product-attribute-groups/1")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
     }
 }

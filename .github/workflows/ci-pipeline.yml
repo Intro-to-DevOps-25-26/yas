@@ -13,6 +13,7 @@ permissions:
   contents: read
   actions: write
   statuses: write
+  checks: write
 
 
 jobs:
@@ -33,6 +34,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Ensure all refs are available
+          git fetch origin --tags 2>/dev/null || true
+
           mapfile -t reactor_modules < <(
             sed -n 's:.*<module>\(.*\)</module>.*:\1:p' pom.xml |
               sed 's/^\s*//; s/\s*$//' |
@@ -42,6 +46,8 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             base_sha="${{ github.event.pull_request.base.sha }}"
             head_sha="${{ github.event.pull_request.head.sha }}"
+            # Ensure base ref exists
+            git fetch origin "${{ github.event.pull_request.base.ref }}" 2>/dev/null || true
           else
             base_sha="${{ github.event.before }}"
             head_sha="${{ github.sha }}"
@@ -51,6 +57,18 @@ jobs:
             base_sha="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
           fi
 
+           # Verify both SHAs exist before diffing
+          if ! git cat-file -e "$base_sha" 2>/dev/null; then
+            echo "WARNING: base_sha $base_sha not found; using root commit" >&2
+            base_sha="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+
+          if ! git cat-file -e "$head_sha" 2>/dev/null; then
+            echo "ERROR: head_sha $head_sha not found" >&2
+            exit 1
+          fi
+
+          
           changed_files="$(git diff --name-only "$base_sha" "$head_sha" || true)"
           build_all=false
           reasons=()
@@ -70,6 +88,7 @@ jobs:
           fi
 
           # If shared build config changes, run CI for all modules.
+          
           # This keeps CI behavior predictable and is a good base for later tasks.
           if printf '%s\n' "$changed_files" | grep -Eq '^(\.github/|checkstyle/)'; then
             build_all=true
@@ -157,6 +176,126 @@ jobs:
           echo "Maven test failed after retries."
           exit 1
 
+      - name: Detect whether module produced coverage data
+        id: coverage-detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          service='${{ matrix.service }}'
+
+          has_coverage_exec=false
+          if [[ -s "$service/target/jacoco.exec" ]]; then
+            has_coverage_exec=true
+          fi
+
+          echo "has_coverage_exec=$has_coverage_exec" >> "$GITHUB_OUTPUT"
+
+          if [[ "$has_coverage_exec" != "true" ]]; then
+            echo "No JaCoCo execution data ($service/target/jacoco.exec); skipping report + threshold enforcement."
+          fi
+
+      - name: Generate JaCoCo report for ${{ matrix.service }}
+        if: steps.coverage-detect.outputs.has_coverage_exec == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt: mvn jacoco:report (${{ matrix.service }})"
+            if mvn -B -ntp -pl ${{ matrix.service }} jacoco:report; then
+              break
+            fi
+            sleep $((attempt * 10))
+          done
+
+          if [[ ! -f "${{ matrix.service }}/target/site/jacoco/jacoco.xml" ]]; then
+            echo "JaCoCo report did not generate jacoco.xml; failing to avoid false green." >&2
+            exit 1
+          fi
+
+      - name: Enforce coverage threshold (70%) for ${{ matrix.service }}
+        if: steps.coverage-detect.outputs.has_coverage_exec == 'true'
+        env:
+          SERVICE: ${{ matrix.service }}
+          COVERAGE_THRESHOLD: '0.70'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          service = os.environ['SERVICE']
+          threshold = float(os.environ.get('COVERAGE_THRESHOLD', '0.70'))
+          report_path = Path(service) / 'target' / 'site' / 'jacoco' / 'jacoco.xml'
+
+          if not report_path.exists():
+            print(f"ERROR: Missing JaCoCo XML report: {report_path}")
+            sys.exit(1)
+
+          root = ET.parse(report_path).getroot()
+          line_counter = None
+          for counter in root.findall('counter'):
+            if counter.get('type') == 'LINE':
+              line_counter = counter
+              break
+
+          if line_counter is None:
+            print("ERROR: No LINE counter found in JaCoCo XML.")
+            sys.exit(1)
+
+          missed = int(line_counter.get('missed', '0'))
+          covered = int(line_counter.get('covered', '0'))
+          total = missed + covered
+          ratio = (covered / total) if total else 0.0
+
+          print(f"Coverage (LINE) for {service}: {covered}/{total} = {ratio:.2%}")
+          print(f"Threshold: {threshold:.2%}")
+
+          if ratio + 1e-12 < threshold:
+            print("ERROR: Coverage below threshold.")
+            sys.exit(1)
+          PY
+
+      - name: Upload JaCoCo coverage report for ${{ matrix.service }}
+        if: always() && steps.coverage-detect.outputs.has_coverage_exec == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.service }}
+          path: |
+            ${{ matrix.service }}/target/site/jacoco/jacoco.xml
+            ${{ matrix.service }}/target/site/jacoco/index.html
+            ${{ matrix.service }}/target/site/jacoco/jacoco.csv
+          if-no-files-found: warn
+
+      - name: Upload placeholder coverage note (no tests/coverage)
+        if: always() && steps.coverage-detect.outputs.has_coverage_exec != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          service='${{ matrix.service }}'
+          out_dir="_coverage_placeholders/$service"
+          mkdir -p "$out_dir"
+          cat > "$out_dir/NO_COVERAGE.md" <<'EOF'
+          No JaCoCo coverage data was produced for this module in this run.
+
+          Common reasons:
+          - The module has no unit tests yet (Surefire: "No tests to run").
+          - Tests were skipped.
+
+          Action:
+          - Implement unit tests in Task 4; once tests execute, JaCoCo will generate jacoco.xml and CI will enforce the 70% threshold.
+          EOF
+
+      - name: Upload placeholder coverage artifact
+        if: always() && steps.coverage-detect.outputs.has_coverage_exec != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.service }}
+          path: _coverage_placeholders/${{ matrix.service }}/NO_COVERAGE.md
+          if-no-files-found: warn
+
       - name: Upload test results for ${{ matrix.service }}
         if: always()
         uses: actions/upload-artifact@v4
@@ -199,10 +338,110 @@ jobs:
           echo "Maven build failed after retries."
           exit 1
 
+      - name: Upload build artifact for ${{ matrix.service }}
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.service }}
+          path: |
+            ${{ matrix.service }}/target/*.jar
+            ${{ matrix.service }}/target/*.war
+            !${{ matrix.service }}/target/*.jar.original
+            !${{ matrix.service }}/target/*-tests.jar
+          if-no-files-found: warn
+
+  test-summary:
+    name: Test Summary
+    needs: [detect-changes, test]
+    if: always() && needs.detect-changes.outputs.has_services == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download test result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: artifacts/test-results
+          merge-multiple: true
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: artifacts/coverage
+          merge-multiple: false
+
+      - name: Publish JUnit test report
+        uses: dorny/test-reporter@v1
+        with:
+          name: Unit Tests
+          path: artifacts/test-results/**/*.xml
+          reporter: java-junit
+          fail-on-error: 'false'
+
+      - name: Publish coverage summary
+        env:
+          COVERAGE_THRESHOLD: '0.70'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          threshold = float(os.environ.get('COVERAGE_THRESHOLD', '0.70'))
+          root = Path('artifacts/coverage')
+
+          lines = []
+          lines.append('## Coverage Summary')
+          lines.append('')
+          lines.append(f'Threshold: **{threshold:.0%}** (LINE)')
+          lines.append('')
+          lines.append('| Module | LINE coverage | Status |')
+          lines.append('|---|---:|---|')
+
+          if not root.exists():
+            lines.append('| (none) | - | No coverage artifacts found |')
+          else:
+            entries = sorted([p for p in root.iterdir() if p.is_dir()])
+            for module_dir in entries:
+              module = module_dir.name.removeprefix('coverage-') if module_dir.name.startswith('coverage-') else module_dir.name
+              jacoco_xml = next(iter(module_dir.rglob('jacoco.xml')), None)
+              no_cov = next(iter(module_dir.rglob('NO_COVERAGE.md')), None)
+
+              if jacoco_xml and jacoco_xml.exists():
+                doc = ET.parse(jacoco_xml).getroot()
+                line_counter = None
+                for counter in doc.findall('counter'):
+                  if counter.get('type') == 'LINE':
+                    line_counter = counter
+                    break
+                if line_counter is None:
+                  lines.append(f'| {module} | (missing LINE counter) | ⚠️ invalid report |')
+                  continue
+
+                missed = int(line_counter.get('missed', '0'))
+                covered = int(line_counter.get('covered', '0'))
+                total = missed + covered
+                ratio = (covered / total) if total else 0.0
+                status = 'PASS' if ratio + 1e-12 >= threshold else 'FAIL'
+                lines.append(f'| {module} | {ratio:.2%} ({covered}/{total}) | {status} |')
+              elif no_cov and no_cov.exists():
+                lines.append(f'| {module} | - | NO DATA (no tests/coverage) |')
+              else:
+                lines.append(f'| {module} | - | NO DATA (artifact missing expected files) |')
+
+          summary_path = Path(os.environ['GITHUB_STEP_SUMMARY'])
+          summary_path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          PY
+
   ci-gate:
     name: CI Gate
     runs-on: ubuntu-latest
-    needs: [detect-changes, test, build]
+    needs: [detect-changes, test, build, test-summary]
     if: always()
     steps:
       - name: Evaluate results
