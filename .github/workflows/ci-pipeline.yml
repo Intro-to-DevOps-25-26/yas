@@ -34,6 +34,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Ensure all refs are available
+          git fetch origin --tags 2>/dev/null || true
+
           mapfile -t reactor_modules < <(
             sed -n 's:.*<module>\(.*\)</module>.*:\1:p' pom.xml |
               sed 's/^\s*//; s/\s*$//' |
@@ -43,6 +46,8 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             base_sha="${{ github.event.pull_request.base.sha }}"
             head_sha="${{ github.event.pull_request.head.sha }}"
+            # Ensure base ref exists
+            git fetch origin "${{ github.event.pull_request.base.ref }}" 2>/dev/null || true
           else
             base_sha="${{ github.event.before }}"
             head_sha="${{ github.sha }}"
@@ -52,6 +57,17 @@ jobs:
             base_sha="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
           fi
 
+           # Verify both SHAs exist before diffing
+          if ! git cat-file -e "$base_sha" 2>/dev/null; then
+            echo "WARNING: base_sha $base_sha not found; using root commit" >&2
+            base_sha="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+
+          if ! git cat-file -e "$head_sha" 2>/dev/null; then
+            echo "ERROR: head_sha $head_sha not found" >&2
+            exit 1
+          fi
+          
           changed_files="$(git diff --name-only "$base_sha" "$head_sha" || true)"
           build_all=false
           reasons=()
