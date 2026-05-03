@@ -55,7 +55,16 @@ class TaxRateControllerTest {
     @Test
     void createTaxRate_ShouldReturnCreated() {
         TaxRatePostVm postVm = new TaxRatePostVm(10.0, "12345", 1L, 1L, 1L);
-        TaxRate taxRate = TaxRate.builder().id(1L).rate(10.0).build();
+        com.yas.tax.model.TaxClass taxClass = mock(com.yas.tax.model.TaxClass.class);
+        when(taxClass.getId()).thenReturn(1L);
+        TaxRate taxRate = TaxRate.builder()
+            .id(1L)
+            .rate(10.0)
+            .taxClass(taxClass)
+            .zipCode("12345")
+            .countryId(1L)
+            .stateOrProvinceId(1L)
+            .build();
         when(taxRateService.createTaxRate(any())).thenReturn(taxRate);
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.newInstance();
 

@@ -19,7 +19,7 @@ class MessagesUtilsTest {
     @Test
     void getMessage_WhenKeyHasArguments_ShouldFormat() {
         // Testing the formatting logic even if key doesn't exist
-        String result = MessagesUtils.getMessage("Key with {0}", "argument");
+        String result = MessagesUtils.getMessage("Key with {}", "argument");
         assertThat(result).isEqualTo("Key with argument");
     }
 }
