@@ -17,13 +17,14 @@ import com.yas.order.viewmodel.order.PaymentOrderStatusVm;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
-@SpringBootTest
+@WebMvcTest(OrderController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class OrderControllerTest {
 
@@ -40,14 +41,14 @@ class OrderControllerTest {
     void getOrderWithItemsById_ShouldReturnOrder() throws Exception {
         when(orderService.getOrderWithItemsById(1L)).thenReturn(OrderVm.builder().id(1L).build());
 
-        mockMvc.perform(get("/storefront/orders/1"))
+        mockMvc.perform(get("/backoffice/orders/{id}", 1L))
             .andExpect(status().isOk());
     }
 
     @Test
     void getAllOrder_ShouldReturnList() throws Exception {
         when(orderService.getAllOrder(any(), any(), any(), any(), any(), any()))
-            .thenReturn(new OrderListVm(List.of(), 0, 10, 0, 0, true));
+            .thenReturn(new OrderListVm(List.of(), 0, 0));
 
         mockMvc.perform(get("/backoffice/orders"))
             .andExpect(status().isOk());
@@ -59,7 +60,7 @@ class OrderControllerTest {
         when(orderService.updateOrderPaymentStatus(any())).thenReturn(request);
 
         mockMvc.perform(put("/backoffice/orders/payment-status")
-            .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk());
     }

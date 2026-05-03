@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,11 +45,12 @@ class CheckoutServiceTest {
 
     @Test
     void getCheckoutWithItemsById_WhenExists_ShouldReturnVm() {
-        Checkout checkout = Checkout.builder().id("123").email("test@test.com").createdBy("user").build();
+        Checkout checkout = Checkout.builder().id("123").email("test@test.com").build();
+        checkout.setCreatedBy("user");
         when(checkoutRepository.findByIdAndCheckoutState("123", CheckoutState.PENDING)).thenReturn(Optional.of(checkout));
         try (MockedStatic<com.yas.commonlibrary.utils.AuthenticationUtils> mockedAuth = mockStatic(com.yas.commonlibrary.utils.AuthenticationUtils.class)) {
             mockedAuth.when(com.yas.commonlibrary.utils.AuthenticationUtils::extractUserId).thenReturn("user");
-            when(checkoutMapper.toVm(any())).thenReturn(CheckoutVm.builder().id("123").email("test@test.com").build());
+            when(checkoutMapper.toVm(any(Checkout.class))).thenReturn(CheckoutVm.builder().id("123").email("test@test.com").build());
 
             CheckoutVm result = checkoutService.getCheckoutPendingStateWithItemsById("123");
 
@@ -59,7 +61,8 @@ class CheckoutServiceTest {
 
     @Test
     void updateCheckoutStatus_ShouldSave() {
-        Checkout checkout = Checkout.builder().id("123").createdBy("user").build();
+        Checkout checkout = Checkout.builder().id("123").build();
+        checkout.setCreatedBy("user");
         when(checkoutRepository.findById("123")).thenReturn(Optional.of(checkout));
         try (MockedStatic<com.yas.commonlibrary.utils.AuthenticationUtils> mockedAuth = mockStatic(com.yas.commonlibrary.utils.AuthenticationUtils.class)) {
             mockedAuth.when(com.yas.commonlibrary.utils.AuthenticationUtils::extractUserId).thenReturn("user");

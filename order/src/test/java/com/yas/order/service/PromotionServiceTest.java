@@ -10,7 +10,7 @@ import com.yas.commonlibrary.utils.AuthenticationUtils;
 import com.yas.order.config.ServiceUrlConfig;
 import com.yas.order.viewmodel.promotion.PromotionUsageVm;
 import java.net.URI;
-import java.util.function.Consumer;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,14 +38,13 @@ class PromotionServiceTest {
 
             RestClient.RequestBodyUriSpec postSpec = mock(RestClient.RequestBodyUriSpec.class);
             RestClient.RequestBodySpec bodySpec = mock(RestClient.RequestBodySpec.class);
-            RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
             RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
             when(restClient.post()).thenReturn(postSpec);
             when(postSpec.uri(any(URI.class))).thenReturn(bodySpec);
             when(bodySpec.headers(any())).thenReturn(bodySpec);
-            when(bodySpec.body(any(List.class))).thenReturn(headersSpec);
-            when(headersSpec.retrieve()).thenReturn(responseSpec);
+            when(bodySpec.body(any(List.class))).thenReturn(bodySpec);
+            when(bodySpec.retrieve()).thenReturn(responseSpec);
 
             promotionService.updateUsagePromotion(List.of(PromotionUsageVm.builder().build()));
 

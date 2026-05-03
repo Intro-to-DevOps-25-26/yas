@@ -41,14 +41,13 @@ class CartServiceTest {
 
             RestClient.RequestBodyUriSpec postSpec = mock(RestClient.RequestBodyUriSpec.class);
             RestClient.RequestBodySpec bodySpec = mock(RestClient.RequestBodySpec.class);
-            RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
             RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
             when(restClient.post()).thenReturn(postSpec);
             when(postSpec.uri(any(URI.class))).thenReturn(bodySpec);
             when(bodySpec.headers(any())).thenReturn(bodySpec);
-            when(bodySpec.body(any(List.class))).thenReturn(headersSpec);
-            when(headersSpec.retrieve()).thenReturn(responseSpec);
+            when(bodySpec.body(any(List.class))).thenReturn(bodySpec);
+            when(bodySpec.retrieve()).thenReturn(responseSpec);
 
             OrderVm orderVm = OrderVm.builder()
                 .orderItemVms(Set.of(OrderItemVm.builder().productId(1L).quantity(1).build()))
