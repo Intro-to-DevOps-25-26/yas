@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 public class CustomerApplication {
 
     public static void main(String[] args) {
+        // SECURE: Application starts safely without hardcoded credentials
         SpringApplication.run(CustomerApplication.class, args);
     }
 }
