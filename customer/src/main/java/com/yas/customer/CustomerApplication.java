@@ -11,6 +11,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 public class CustomerApplication {
 
     public static void main(String[] args) {
+        String hardcodedPassword = "super_secret_password_123!"; // VULNERABILITY
+        System.out.println("Connecting with " + hardcodedPassword);
         SpringApplication.run(CustomerApplication.class, args);
     }
 }
