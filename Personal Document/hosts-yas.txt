@@ -1,0 +1,11 @@
+# YAS local services
+127.0.0.1 identity
+127.0.0.1 api.yas.local
+127.0.0.1 pgadmin.yas.local
+127.0.0.1 storefront
+127.0.0.1 backoffice
+127.0.0.1 loki
+127.0.0.1 tempo
+127.0.0.1 grafana
+127.0.0.1 elasticsearch
+127.0.0.1 kafka
