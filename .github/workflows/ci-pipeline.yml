@@ -466,6 +466,13 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Download build artifact (JAR)
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ matrix.service }}
+          path: ./
+
       - name: Log in to Docker Hub
         if: steps.check-dockerfile.outputs.exists == 'true'
         uses: docker/login-action@v3
