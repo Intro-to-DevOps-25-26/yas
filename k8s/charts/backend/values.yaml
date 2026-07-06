@@ -104,6 +104,14 @@ readinessProbe:
     path: /actuator/health/readiness
     port: metric
 
+startupProbe:
+  periodSeconds: 10
+  failureThreshold: 30
+  successThreshold: 1
+  httpGet:
+    path: /actuator/health/liveness
+    port: metric
+
 serviceMonitor:
   enabled: true
 
