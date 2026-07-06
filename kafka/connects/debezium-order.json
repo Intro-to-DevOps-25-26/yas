@@ -3,7 +3,7 @@
   "topic.prefix": "dborder",
   "database.user": "admin",
   "database.dbname": "order",
-  "database.hostname": "postgres",
+  "database.hostname": "postgresql.postgres.svc.cluster.local",
   "database.password": "admin",
   "database.port": "5432",
   "key.converter.schemas.enable": "false",
