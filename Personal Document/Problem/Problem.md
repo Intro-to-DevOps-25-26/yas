@@ -57,7 +57,7 @@ Cac thanh phan log/trace/metrics chi dung neu lam phan nang cao hoac can quan sa
 Yeu cau:
 
 - 1 master node
-- 1 worker node
+- 3 worker node
 
 Hoac co the dung:
 
@@ -68,8 +68,65 @@ Hoac co the dung:
 
 Sau khi deploy tren K8S:
 
-- Dung `NodePort`
+- Dung `NodePort` de cung cap domain name:port dung theo yeu cau original
 - Developer se tu them `hosts` tren may minh de tro domain ve worker node
+- Neu can test noi bo, co the truy cap thong qua IP node + NodePort
+
+### 3.4 Ket noi node qua Tailscale
+
+Vi cac may khong cung mang, dung `Tailscale` de noi cac node trong cung 1 cluster.
+
+- Cac node worker phai ket noi on dinh ve master
+- May cua developer debug cung co the join Tailscale de truy cap cluster on dinh nhu may master
+- Muc tieu la tat ca may co lien quan deu truy cap duoc control plane va NodePort mot cach on dinh
+- Tailscale dung de tao duong noi mang rieng, khong phai cluster member
+
+### 3.5 Thiet ke chot
+
+- `master`: chi chay control plane, khong chay workload ung dung
+- `worker`: chay tat ca service core, `sampledata` Job, va cac pod can expose
+- `NodePort`: dung cho cac service can cung cap `domain name:port` theo original
+- `ClusterIP`: dung cho cac service noi bo khong can expose truc tiep
+- `sampledata`: chay duoi dang `Job`, seed xong thi ket thuc
+- `Tailscale`: dung cho ca node cluster va may dev/debug de truy cap cluster on dinh
+
+### 3.6 Mapping service
+
+| Service | Loai | Ly do |
+|---|---|---|
+| `swagger-ui` | `NodePort` | Can mo browser de xem API docs |
+| `storefront-ui` | `NodePort` | Trang demo chinh cho nguoi dung |
+| `backoffice-ui` | `NodePort` | Trang demo chinh cho admin |
+| `storefront-bff` | `ClusterIP` | Chi phuc vu UI noi bo |
+| `backoffice-bff` | `ClusterIP` | Chi phuc vu UI noi bo |
+| `product` | `ClusterIP` | Core backend |
+| `cart` | `ClusterIP` | Core backend |
+| `order` | `ClusterIP` | Core backend |
+| `customer` | `ClusterIP` | Core backend |
+| `inventory` | `ClusterIP` | Core backend |
+| `tax` | `ClusterIP` | Core backend |
+| `media` | `ClusterIP` | Core backend |
+| `search` | `ClusterIP` | Core backend, chi mo NodePort khi debug tam |
+| `sampledata` | `Job` | Seed 1 lan roi tat |
+
+Quy tac chot:
+
+- `NodePort` chi dung cho 3 service demo chinh: `swagger-ui`, `storefront-ui`, `backoffice-ui`
+- `ClusterIP` cho tat ca service con lai de giu cluster gon va an toan
+- `sampledata` khong chay lau dai, phai la `Job`
+
+### 3.7 Trinh tu task
+
+1. Hoan tat Docker Desktop storage va local compose
+2. Kiem tra lai core service local va `sampledata`
+3. Dung K8S cluster `1 master + 3 worker`
+4. Ket noi cac node qua `Tailscale`
+5. Tao manifest `Deployment`, `Service`, `Job`
+6. Expose service bang `NodePort`
+7. Cap nhat `hosts`
+8. Hoan thien GitHub Actions CD de build, push, deploy, cleanup
+9. Lam `dev/staging` neu chot scope nang cao
+10. Lam service mesh nang cao bat buoc, observability chi giu neu can
 
 ## 4. CI/CD yeu cau
 
@@ -102,7 +159,14 @@ Muc tieu la deploy mot service dang thay doi ma khong anh huong toan bo he thong
 
 ### 4.3 Cleanup job
 
-Tao them Jenkins job de xoa phan trien khai cua `developer_build`.
+Tao them GitHub Actions workflow hoac job tuong duong de xoa phan trien khai cua `developer_build`.
+
+Workflow CD can bao gom:
+
+- build image theo commit id / tag / branch quy dinh
+- push image len Docker Hub
+- deploy image vao cluster dung namespace phu hop
+- cleanup khi can xoa deployment cu
 
 ## 5. Nang cao tuy chon
 
@@ -113,12 +177,35 @@ Neu lam phan nang cao:
 - `main` thay doi thi auto deploy vao namespace `dev`
 - khi co release tag nhu `v1.2.3`, CI/CD build image theo tag do
 - deploy image vao namespace `staging`
+- `dev` dung cho test thay doi lien tuc
+- `staging` dung cho ban chuan bi release
 
 ### 5.2 GitOps
 
 Phuong an nang cao:
 
 - dung ArgoCD de quan ly `dev` va `staging`
+
+### 5.3 CD chot su dung GitHub Actions
+
+Voi scope hien tai, chot su dung GitHub Actions cho CD.
+
+- CI/CD co the tach thanh workflow build image va workflow deploy
+- Moi branch hoac tag map sang tag image phu hop
+- Khong bat buoc phai dung Jenkins neu repo da co san GitHub Actions
+- Neu lam `dev/staging`, workflow can phan biet env, namespace, va tag image theo branch / release
+- CD phai deploy luon, khong chi dung o muc build/push
+- Workflow CD phai dap ung full scope trong original: build image, push Docker Hub, deploy vao K8S, cung cap dia chi truy cap sau deploy, va co cleanup job
+
+### 5.4 Service mesh bat buoc
+
+Phan nang cao service mesh la phan can lam trong scope do an:
+
+- bat mTLS giua cac service deploy tren K8S
+- cau hinh `AuthorizationPolicy` de gioi han service-to-service access
+- cau hinh `VirtualService` retry cho loi 500
+- dung Kiali de quan sat topology
+- test bang `kubectl exec` va `curl`
 
 ## 6. Service Mesh nang cao
 
@@ -135,6 +222,16 @@ Kich ban test can chung minh:
 - service bi loi 500 thi retry tu dong
 - chi service duoc phep moi goi duoc nhau
 - service khong duoc phep thi bi chan ket noi
+
+### 6.1 Health check cho K8S
+
+Khi deploy len K8S, can co health check ro rang de dam bao pod on dinh:
+
+- `readinessProbe` de chi nhan traffic khi service da san sang
+- `livenessProbe` de restart pod neu app bi treo
+- Neu la Spring Boot, nen mo `actuator health` de dung lam endpoint kiem tra
+
+Day khong chi la "nen co" ma la yeu cau can thiet neu muon deploy K8S on dinh va khong bi restart hoac route sai.
 
 ## 7. Docker Desktop storage cho chay lau dai
 
@@ -164,10 +261,22 @@ Lam theo Docker Desktop UI:
 - Docker Docs cho biet ban co the doi vi tri nay trong `Settings -> Resources -> Advanced`
 - Sau khi doi, can dam bao o `D:` co du dung luong trong lau dai
 
+## 7.4 OTEL local
+
+Voi scope hien tai, collector duoc giu lai neu can quan sat sau hon.
+
+- neu can demo co ban va muon giam log noise thi co the tat OTEL local
+- neu tat OTEL, app van chay binh thuong, nhung khong con trace, metrics, hoac log export ra collector
+- neu muon giu observability, can them OpenTelemetry Collector vao compose hoac cluster
+- vi yeu cau hien tai da chon giu collector, khong xem day la blocker cua luong chinh
+- collector se phuc vu cho cac task observability/service mesh ve sau
+
 ## 8. Ghi chu trien khai thuc te
 
 - Neu chi can demo co ban, hay uu tien core service truoc
 - `sampledata` chi dung de seed
+- Tren local thi `sampledata` chi chay 1 lan, sau do co the tat
+- Tren K8S neu can seed rieng, nen tach thanh job seed
 - `swagger-ui` la entry point de nhat de verify API
 - `storefront-ui` va `backoffice-ui` la phan demo nguoi dung nhin thay truc tiep
 - Khi lam K8S, nen chot som domain mapping de khong phai sua nhieu lan
@@ -178,7 +287,7 @@ Uu tien thuc thi:
 
 1. Chuyen Docker Desktop storage sang `D:`
 2. Deploy core 14 services theo scope tren
-3. Bo observability cho ban co ban
+3. Giu collector neu can observability/service mesh
 4. Dung `NodePort` + hosts mapping cho K8S
 5. Sau do moi mo rong sang CI/CD nang cao va service mesh
 
@@ -194,14 +303,16 @@ Sau khi chuyen storage sang `D:` thanh cong, thu tu nen lam la:
    - `http://backoffice/`
    - `http://api.yas.local/swagger-ui/`
 5. Neu local on, chuyen sang K8S:
-   - chon Minikube hoac cluster 1 master + 1 worker
+   - chon cluster 1 master + 3 worker hoac Minikube neu can
    - deploy 14 service core
    - expose bang `NodePort`
+   - neu can truy cap giua cac may khac mang, dung Tailscale de noi cluster va debug
 6. Sau khi K8S on dinh, lam CI/CD:
    - build image theo commit id cua branch
    - push len Docker Hub
    - tao job `developer_build`
-7. Chi lam service mesh khi phan deploy co ban da chay duoc:
+   - chot dev/staging neu lam nang cao
+7. Lam service mesh sau khi phan deploy co ban da chay duoc:
    - mTLS
    - AuthorizationPolicy
    - VirtualService retry
@@ -218,13 +329,13 @@ Da chay Docker Compose va xac nhan cac service co ban dang len:
 
 Van de da ghi nhan trong qua trinh kiem tra:
 
-- Probe `http://localhost/product/actuator/health` tra ve `500` vi endpoint nay khong co trong cau hinh hien tai
+- Probe `http://localhost/product/actuator/health` tra ve `500` vi endpoint nay chua duoc mo trong cau hinh hien tai
 - Cac service dang co log OTEL loi `collector: Name does not resolve` vi stack nay chua co OpenTelemetry Collector
 
 Huong xu ly:
 
 - Su dung cac route API that su co san de kiem tra nhanh
-- Neu can health check cho K8S, bat actuator health ro rang trong service
+- Neu can health check cho K8S, bat actuator health ro rang trong service va khai bao readiness / liveness probe
 - Neu khong can observability cho scope nay, tat OTEL export hoac bo sung collector
 
 ## 12. Xac nhan cac service core
@@ -264,3 +375,239 @@ Hiện tại deploy local theo Docker Compose đã ổn định cho scope core:
 - Các lỗi còn lại chỉ là telemetry OTEL không tìm thấy `collector`, không chặn luồng demo chính
 
 Ket luan: co the dung stack nay de demo local va lam buoc tiep theo sang K8S / CI-CD.
+
+### 12.5 Trang thai cap nhat
+
+Trang thai thuc te hien tai:
+
+- `search` da on dinh trong K8S, pod start thanh cong va tra `200 OK` qua `port-forward` vao service
+- `storefront` tra `200 OK`
+- `backoffice` tra `302 Found`
+- `sampledata` da seed thanh cong mot lan va co the tat sau do
+- `Keycloak` va cac BFF da duoc giai quyet loi DNS / `identity` trong cluster
+- OTEL local co the coi la log noise khi khong can observability day du, nhung collector van duoc giu de phuc vu service mesh / observability ve sau
+- K8S local da co cluster 1 master + 3 worker va deploy duoc core service tren cluster nay
+
+## 13. Checklist trang thai
+
+### Da lam thuc te
+
+- [x] Chon huong deploy local bang Docker Compose
+- [x] Chuyen Docker Desktop storage sang o `D:`
+- [x] Khoi dong stack local thanh cong
+- [x] Xac nhan cac service core dang `Up`
+- [x] Kiem tra endpoint that cho `product`, `cart`, `order`, `customer`, `inventory`, `tax`, `media`, `search`
+- [x] Kiem tra UI/BFF cho `storefront`, `backoffice`, `swagger-ui`
+- [x] Giai quyet loi `search` bootstrap Elasticsearch (`indices.exists`)
+- [x] Giai quyet loi runtime `slf4j-api` trong `search`
+- [x] Xac nhan `search` tra `200 OK` sau khi fix va redeploy
+- [x] Seed `sampledata` thanh cong va xac nhan du lieu da vao DB
+- [x] Khoi tao K8S local 1 master + 3 worker va deploy core service thanh cong
+- [x] Giai quyet loi DNS / `identity` / Keycloak lam `storefront-bff` va `backoffice-bff` treo
+- [x] Ghi log cac loi da gap vao `Personal Document/ErrorEncounter/`
+- [x] Cap nhat scope service can giu va bo qua observability co ban
+- [x] Xac dinh `sampledata` chi can chay mot lan de seed du lieu
+- [x] Da fix `search` fallback Kafka ve `kafka:9092`
+- [x] Da fix `wait-for-it.sh` CRLF sang LF
+
+### Da chot thiet ke
+
+- [x] Chot CD su dung GitHub Actions
+- [x] Chot K8S dinh huong 1 master + 3 worker
+- [x] Chot dung Tailscale de ket noi cac node khac mang
+- [x] Chot giu collector neu can observability
+- [x] Chot khong dung Ingress trong scope chinh, chi dung NodePort theo original
+- [x] Chot `sampledata` se chay duoi dang Job trong K8S
+- [x] Chot phan bo service: `NodePort` cho service can expose, `ClusterIP` cho noi bo
+
+### Con lai
+
+#### 13.1 Local compose va local test
+
+- [ ] Phan loai compose: giu co the giu service du neu khong gay hai, nhung phai document ro core 14 service + `sampledata`
+- [ ] Cap nhat local_test.md neu co thay doi route, port, hay cach test K8S
+
+#### 13.2 K8S cluster va deploy
+
+- [ ] Hoan thien health check cho K8S: `readinessProbe`, `livenessProbe`, actuator health cho toan bo service
+- [ ] Viet manifest `Deployment`, `Service`, `Job` chuan cho 14 service core
+- [ ] Kiem tra worker scheduling, pod anti-affinity neu can
+- [ ] Kiem tra rollout / rollback cho cac chart quan trong
+- [ ] Chot NodePort / ClusterIP / Job dung voi scope
+- [ ] Cap nhat file `hosts` de map domain local ve worker node
+- [ ] Kiem tra route NodePort / domain tren may dev khi ket noi qua Tailscale
+
+#### 13.3 CI/CD
+
+- [ ] Hoan thien workflow GitHub Actions cho CI/CD
+- [ ] Build image theo commit id / tag / branch rule
+- [ ] Tao flow `dev` va `staging`
+- [ ] Hoan thien deploy/cleanup cho `developer_build`
+- [ ] Chot namespace va quy tac image tag cho moi environment
+
+#### 13.4 Service mesh bat buoc
+
+- [ ] Bat mTLS cho cluster/namespace ap dung
+- [ ] Viet `AuthorizationPolicy` cho cac cuoc goi allowed
+- [ ] Viet `VirtualService` retry / timeout
+- [ ] Cai va dung Kiali de xem topology
+- [ ] Test `curl` tu pod khac de chung minh allow/deny
+- [ ] Thu thap log / evidence cho retry va policy
+
+#### 13.5 Tieu chi hoan thanh
+
+- [ ] Core 14 service chay on dinh
+- [ ] `sampledata` seed thanh cong va co the tat
+- [ ] CI/CD build va deploy chay dung
+- [ ] Service mesh co mTLS, policy, retry, va Kiali evidence
+- [ ] Tai lieu va checklist dong bo voi trang thai thuc te
+
+## 14. K8S 4 may + Tailscale
+
+Muc tieu la dung 4 may vat ly/debian/ubuntu de tao 1 cluster K8S duy nhat:
+
+- 1 may lam `control-plane`
+- 3 may lam `worker`
+- cac may co the khong chung LAN, nen dung `Tailscale` de noi mang
+
+### 14.1 Can lam gi
+
+- Cai Kubernetes runtime hoac `kind`/`kubeadm` tren 4 may
+- Cai `Tailscale` tren ca 4 may
+- Cho ca 4 may join chung 1 tailnet
+- Dung dia chi Tailscale de cac node nhin thay nhau on dinh
+- Khoi tao cluster voi 1 master va 3 worker
+- Dam bao worker co the truy cap control-plane va control-plane co the giao tiep nguoc lai
+- Mo cac port can thiet cho control-plane, kubelet, NodePort va cac service phu tro
+- Kiem tra DNS noi bo, CoreDNS, va route NodePort tu may dev/debug
+
+### 14.2 Workload giua 4 may
+
+- `master`: chi chay control-plane, API server, scheduler, controller manager
+- `worker 1-3`: chay tat ca workload app, bao gom core service, `sampledata` Job, va cac pod can expose
+- Neu can debug, may dev/debug co the join tailnet de truy cap cluster qua NodePort/port-forward
+
+### 14.3 Checklist trien khai
+
+- [ ] Cai Tailscale tren 4 may
+- [ ] Kiem tra 4 may nhin thay nhau bang IP Tailscale
+- [ ] Cai Kubernetes cluster voi 1 control-plane + 3 worker
+- [ ] Kiem tra `kubectl get nodes`
+- [ ] Dat app workload chi tren worker
+- [ ] Kiem tra NodePort tu may ngoai cluster
+- [ ] Kiem tra port-forward va DNS noi bo
+
+## 15. Phan bo cong viec
+
+### 15.1 Workload so voi fix app
+
+- `Fix app`
+  - Thuong ton nhieu thoi gian debug code, log, dependency, va data flow
+  - Phu thuoc nhieu vao source, build, va test runtime
+  - Voi `search`, `bff`, `sampledata` va Keycloak, loi thuong lien hoan theo chuoi
+- `Deploy app`
+  - Ton nhieu cong xay dung helms/charts, namespace, service, ingress/nodeport, secret/config
+  - Ton nhieu cong kich hoat cluster, route, DNS, image tag, va rollout
+  - Sau khi khuon mau da on, deploy thuong lap lai nhanh hon fix app
+
+### 15.2 Giao task cho 3 nguoi
+
+#### Nguoi 1: Cluster va ha tang
+
+- Cai 4 may + Tailscale
+- Tao cluster 1 master + 3 worker
+- Cai namespace, secrets chung, CoreDNS, NodePort route
+- Chot health check co ban va verify `kubectl get nodes`, `kubectl get pods`
+
+#### Nguoi 2: App deploy va Helm
+
+- Hoan thien chart/values cho 14 service core
+- Hoan thien `sampledata` Job
+- Hoan thien workflow GitHub Actions deploy bang Helm
+- Kiem tra tag image, namespace, rollout, cleanup
+
+#### Nguoi 3: Fix app va service mesh
+
+- Fix chuoi loi app con lai, dac biet `search`, BFF, Kafka, Elasticsearch, Keycloak
+- Hoan thien health endpoint va readiness/liveness
+- Lam service mesh nang cao bat buoc: mTLS, AuthorizationPolicy, VirtualService retry, Kiali
+
+### 15.3 Phan nang cao bat buoc
+
+- [ ] mTLS giua cac service
+- [ ] AuthorizationPolicy
+- [ ] VirtualService retry cho loi 500
+- [ ] Kiali topology
+- [ ] Test bang `kubectl exec` va `curl`
+
+## 16. YML deploy Helm nhap vai tro de chot scope
+
+Mau workflow nay chi la khung de deploy qua Helm cho cluster K8S 1 master + 3 worker:
+
+```yaml
+name: k8s-deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "dev or staging"
+        required: true
+        default: "dev"
+      branch:
+        description: "Branch to deploy"
+        required: true
+        default: "main"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Load kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy shared config
+        run: |
+          helm upgrade --install yas-configuration k8s/charts/yas-configuration \
+            -n yas --create-namespace
+
+      - name: Deploy app stack
+        run: |
+          helm upgrade --install product k8s/charts/product -n yas --create-namespace
+          helm upgrade --install cart k8s/charts/cart -n yas --create-namespace
+          helm upgrade --install order k8s/charts/order -n yas --create-namespace
+          helm upgrade --install customer k8s/charts/customer -n yas --create-namespace
+          helm upgrade --install inventory k8s/charts/inventory -n yas --create-namespace
+          helm upgrade --install tax k8s/charts/tax -n yas --create-namespace
+          helm upgrade --install media k8s/charts/media -n yas --create-namespace
+          helm upgrade --install search k8s/charts/search -n yas --create-namespace
+          helm upgrade --install storefront-bff k8s/charts/storefront-bff -n yas --create-namespace
+          helm upgrade --install storefront-ui k8s/charts/storefront-ui -n yas --create-namespace
+          helm upgrade --install backoffice-bff k8s/charts/backoffice-bff -n yas --create-namespace
+          helm upgrade --install backoffice-ui k8s/charts/backoffice-ui -n yas --create-namespace
+          helm upgrade --install swagger-ui k8s/charts/swagger-ui -n yas --create-namespace
+          helm upgrade --install sampledata k8s/charts/sampledata -n yas --create-namespace
+
+      - name: Verify rollout
+        run: |
+          kubectl get pods -n yas
+          kubectl rollout status deploy/product -n yas --timeout=10m || true
+```
+
+Huong dung thuc te:
+
+- `workflow_dispatch` dung de deploy theo branch nhap tay
+- `environment` co the map sang `dev` hoac `staging`
+- image tag se lay tu branch/commit do workflow build cung cap
+- `sampledata` co the chuyen thanh `Job` va chi chay 1 lan sau deploy

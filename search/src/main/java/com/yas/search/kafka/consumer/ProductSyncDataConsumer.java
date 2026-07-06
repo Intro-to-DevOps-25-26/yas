@@ -9,7 +9,7 @@ import com.yas.commonlibrary.kafka.cdc.message.ProductCdcMessage;
 import com.yas.commonlibrary.kafka.cdc.message.ProductMsgKey;
 import com.yas.search.service.ProductSyncDataService;
 import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
+import java.util.logging.Logger;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.MessageHeaders;
@@ -21,9 +21,10 @@ import org.springframework.stereotype.Service;
 /**
  * Product synchronize data consumer for elasticsearch.
  */
-@Slf4j
 @Service
 public class ProductSyncDataConsumer extends BaseCdcConsumer<ProductMsgKey, ProductCdcMessage> {
+
+    private static final Logger LOGGER = Logger.getLogger(ProductSyncDataConsumer.class.getName());
 
     private final ProductSyncDataService productSyncDataService;
 
@@ -49,7 +50,7 @@ public class ProductSyncDataConsumer extends BaseCdcConsumer<ProductMsgKey, Prod
     public void sync(ProductMsgKey key, ProductCdcMessage productCdcMessage) {
         boolean isHardDeleteEvent = productCdcMessage == null || DELETE.equals(productCdcMessage.getOp());
         if (isHardDeleteEvent) {
-            log.warn("Having hard delete event for product: '{}'", key.getId());
+            LOGGER.warning("Having hard delete event for product: '" + key.getId() + "'");
             productSyncDataService.deleteProduct(key.getId());
         } else {
             var operation = productCdcMessage.getOp();
@@ -57,7 +58,7 @@ public class ProductSyncDataConsumer extends BaseCdcConsumer<ProductMsgKey, Prod
             switch (operation) {
                 case CREATE, READ -> productSyncDataService.createProduct(productId);
                 case UPDATE -> productSyncDataService.updateProduct(productId);
-                default -> log.warn("Unsupported operation '{}' for product: '{}'", operation, productId);
+                default -> LOGGER.warning("Unsupported operation '" + operation + "' for product: '" + productId + "'");
             }
         }
     }

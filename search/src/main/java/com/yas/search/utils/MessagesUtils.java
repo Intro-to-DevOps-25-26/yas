@@ -3,8 +3,6 @@ package com.yas.search.utils;
 import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
-import org.slf4j.helpers.FormattingTuple;
-import org.slf4j.helpers.MessageFormatter;
 
 public class MessagesUtils {
 
@@ -19,7 +17,17 @@ public class MessagesUtils {
             // case message_code is not defined.
             message = errorCode;
         }
-        FormattingTuple formattingTuple = MessageFormatter.arrayFormat(message, var2);
-        return formattingTuple.getMessage();
+        return formatMessage(message, var2);
+    }
+
+    private static String formatMessage(String message, Object... args) {
+        if (args == null || args.length == 0) {
+            return message;
+        }
+        String formatted = message;
+        for (Object arg : args) {
+            formatted = formatted.replaceFirst("\\{}", arg == null ? "null" : arg.toString());
+        }
+        return formatted;
     }
 }

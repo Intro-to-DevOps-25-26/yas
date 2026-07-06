@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Logger;
 import lombok.Getter;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,6 @@ import org.jetbrains.annotations.NotNull;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
@@ -45,7 +44,7 @@ import org.mockito.MockitoAnnotations;
 @Getter
 public abstract class CdcConsumerTest<K, M> {
 
-    private final Logger logger = LoggerFactory.getLogger(CdcConsumerTest.class);
+    private final Logger logger = Logger.getLogger(CdcConsumerTest.class.getName());
 
     private final Class<K> keyType;
     private final Class<M> messageType;
@@ -97,7 +96,7 @@ public abstract class CdcConsumerTest<K, M> {
         var rs = getKafkaTemplate()
                 .send(this.cdcEvent, message)
                 .get(10, TimeUnit.SECONDS);
-        logger.info("Sent message completed: {}", rs);
+        logger.info("Sent message completed: " + rs);
     }
 
     protected void sendMsg(K key, M message)
@@ -105,7 +104,7 @@ public abstract class CdcConsumerTest<K, M> {
         var rs = getKafkaTemplate()
             .send(this.cdcEvent, key, message)
             .get(10, TimeUnit.SECONDS);
-        logger.info("Sent message completed: {}", rs);
+        logger.info("Sent message completed: " + rs);
     }
 
     protected <R> void simulateHttpRequestWithResponse(URI url, R response, Class<R> responseType) {
@@ -150,7 +149,7 @@ public abstract class CdcConsumerTest<K, M> {
         // retryTime =  (1st run) + (total run when retrying) + (total back off time)
         long retryTime = processTime + (attempts * processTime) + (backOff * attempts);
         long waitTime = (attempts > 0 ? retryTime : processTime) * numOfRecords;
-        logger.info("Consumer Processing expected time: {}s", waitTime);
+        logger.info("Consumer Processing expected time: " + waitTime + "s");
         Thread.sleep(Duration.ofSeconds(waitTime));
     }
 
