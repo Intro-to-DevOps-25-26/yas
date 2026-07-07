@@ -55,17 +55,17 @@ show_status() {
 }
 
 deploy_infra() {
-  ./setup-keycloak.sh
-  ./setup-redis.sh
-  ./setup-cluster.sh
+  bash "$K8S_DIR/setup-keycloak.sh"
+  bash "$K8S_DIR/setup-redis.sh"
+  bash "$K8S_DIR/setup-cluster.sh"
 }
 
 deploy_config() {
-  ./deploy-yas-configuration.sh
+  bash "$K8S_DIR/deploy-yas-configuration.sh"
 }
 
 deploy_apps() {
-  ./deploy-yas-applications.sh
+  bash "$K8S_DIR/deploy-yas-applications.sh"
 }
 
 case "$MODE" in

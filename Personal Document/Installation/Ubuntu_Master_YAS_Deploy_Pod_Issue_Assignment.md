@@ -13,37 +13,38 @@ Ngay: 2026-07-06
 
 ### `master` - `Tú`
 
-- `kube-system/coredns-66bc5c9577-7bhpt`: `0/1 Running`, DNS service chua on dinh
-- `kube-system/coredns-66bc5c9577-s8sfr`: `0/1 Running`, DNS service chua on dinh
+- `kube-system/coredns-bb64d546d-gmzpc`: `0/1 Running`, DNS service chua on dinh
 
 ### `worker-1` - `Hòa`
 
-- `keycloak/keycloak-0`: `CrashLoopBackOff`
-- `yas/customer-6f9c5d4f6-7745j`: `CrashLoopBackOff`
-- `yas/customer-ddfbb79fc-vs59c`: `CrashLoopBackOff`
-- `yas/inventory-5cdcdbf9f-7n2bn`: `CrashLoopBackOff`
-- `yas/product-57cbf45d9c-ltx92`: `CrashLoopBackOff`
-- `yas/tax-d6fddd4d4-xkkgg`: `CrashLoopBackOff`
+- Da hoan thanh phan giao:
+  - `keycloak/keycloak-0`: `Running`
+  - `yas/customer-*`: `Running`
+  - `yas/inventory-*`: `Running`
+  - `yas/product-*`: `Running`
+  - `yas/tax-*`: `Running`
+- Cac pod con loi tren `worker-1` nhung thuoc scope nhom khac:
+  - `yas/backoffice-bff-5959897f4f-shlts`: `CrashLoopBackOff`
+  - `yas/backoffice-bff-d47f896bc-m5vjn`: `CrashLoopBackOff`
+  - `yas/media-65dfbbfccd-p77wm`: `CrashLoopBackOff`
+  - `yas/media-fb8b4b8bd-nlp47`: `CrashLoopBackOff`
+  - `yas/search-7cf85d657-lf4ts`: `CrashLoopBackOff`
+  - `yas/search-8654565bbf-npv9m`: `CrashLoopBackOff`
+  - `yas/storefront-bff-77d44f9f76-c84tp`: `CrashLoopBackOff`
+  - `yas/storefront-bff-7bb884f4bb-czmr7`: `Error`
 
 ### `naul1-pc` - `Luân`
 
-- `elasticsearch/elasticsearch-es-node-0`: `CrashLoopBackOff`
-- `yas/backoffice-bff-5959897f4f-nxg7g`: `CrashLoopBackOff`
-- `yas/backoffice-bff-d47f896bc-hrzrq`: `CrashLoopBackOff`
-- `yas/inventory-78c79d5787-tvd6j`: `CrashLoopBackOff`
-- `yas/order-6d89d75dfb-gsbgp`: `CrashLoopBackOff`
-- `yas/storefront-bff-77d44f9f76-xqmdr`: `CrashLoopBackOff`
-- `yas/tax-bdf6d7bbb-pkrrx`: `CrashLoopBackOff`
+- `elasticsearch/elasticsearch-es-node-0`: `Running`
+- `yas` workload tren node nay da duoc giat ve `worker-1` sau khi rollout lai
 
 ### `worker-3` - `Khoa`
 
-- `kafka/debezium-connect-cluster-connect-0`: `CrashLoopBackOff`
-- `redis/redis-replicas-0`: `Running` nhung `0/1 Ready`, con unstable
-- `yas/cart-6f45ffc58-nbc5v`: `CrashLoopBackOff`
-- `yas/cart-75dcc8f96b-ztmpb`: `CrashLoopBackOff`
-- `yas/media-65dfbbfccd-5l7v8`: `CrashLoopBackOff`
-- `yas/media-fb8b4b8bd-p5v68`: `CrashLoopBackOff`
-- `yas/storefront-bff-7bb884f4bb-pmx54`: `CrashLoopBackOff`
+- `kafka/debezium-connect-cluster-connect-0`: `Running`
+- `redis/redis-replicas-0`: `Running`
+- `yas/cart-*`: `Running`
+- `yas/media-*`: `Running`
+- `yas/storefront-bff-*`: `Running`
 
 ## 3. Phan Cong Fix
 
@@ -55,29 +56,31 @@ Ngay: 2026-07-06
 
 ### `worker-1` - `Hòa`
 
-- Fix `keycloak-0` truoc, vi dang fail JDBC connection va DNS toi PostgreSQL.
-- Fix `customer`, `inventory`, `product`, `tax` tren `worker-1` sau khi Keycloak va DNS on dinh.
-- Kiem tra env, issuer, datasource URL va readiness probe cua cac pod nay.
+- Da hoan thanh phan giao:
+  - `keycloak-0` da len `Running`
+  - `customer`, `inventory`, `product`, `tax` da rollout thanh cong
+- Khong con phan fix thuoc scope Hòa trong assignment ban dau.
 
 ### `naul1-pc` - `Luân`
 
-- Fix `elasticsearch-es-node-0` truoc, vi dang crashloop va anh huong den search stack.
-- Fix `backoffice-bff`, `inventory`, `order`, `storefront-bff`, `tax` tren node nay.
-- Kiem tra resource, bootstrap checks, config va log cua Elasticsearch.
+- `elasticsearch-es-node-0` da `Running`.
+- Cac pod app lien quan da duoc chuyen ve node khac sau khi overlay on dinh.
+- Phan con lai hien chu yeu nam o `backoffice-bff`, `media`, `search`, `storefront-bff` tren `worker-1`.
 
 ### `worker-3` - `Khoa`
 
-- Fix `debezium-connect-cluster-connect-0` truoc, vi dang fail resolve Kafka bootstrap service.
-- Kiem tra va on dinh `redis-replicas-0`.
-- Fix `cart`, `media`, `storefront-bff` tren `worker-3` sau khi dependency on.
+- `debezium-connect-cluster-connect-0` da `Running`.
+- `redis-replicas-0` da `Running`.
+- Cac pod app lien quan da on dinh sau khi pod-network duc thong.
+- Khong con pod loi dang thuoc scope Khoa trong assignment ban dau.
 
 ## 4. Thu Tu De Xu Ly
 
-1. `master` - `Tú`: khong cho DNS / CoreDNS on dinh.
-2. `worker-1` - `Hòa`: fix `keycloak-0`.
-3. `worker-3` - `Khoa`: fix `debezium-connect-cluster-connect-0` va `redis-replicas-0`.
-4. `naul1-pc` - `Luân`: fix `elasticsearch-es-node-0`.
-5. Sau do quay lai restart / rollout cac pod backend app con lai.
+1. `master` - `Tú`: hoan tat DNS / CoreDNS va overlay.
+2. `worker-1` - `Hòa`: da hoan thanh.
+3. `worker-3` - `Khoa`: da hoan thanh.
+4. `naul1-pc` - `Luân`: da hoan thanh.
+5. Phan con lai: debug `backoffice-bff`, `media`, `search`, `storefront-bff` tren `worker-1`.
 
 ## 5. Ghi Chu
 
@@ -128,3 +131,16 @@ Ngay: 2026-07-06
 - Neu source app thay doi va image phai build lai, can co buoc build/push image roi cap nhat tag trong values/chart truoc khi redeploy.
 - Neu chi sua local tren worker ma chua push source/image moi, `master` deploy lai se van chay code cu.
 - Neu muon biet pod co fix on chua trong cluster that, phai test sau buoc deploy tren `master`, khong chi duoc dua vao local test tren worker.
+
+## 10. Trang Thai Doi Chieu Moi Nhat
+
+- Da doi chieu lai sau redeploy app gan nhat:
+  - `keycloak`, `customer`, `inventory`, `product`, `tax`, `debezium-connect-cluster-connect`, `redis-replicas`, `elasticsearch-es-node` dang o trang thai dung.
+  - `coredns` van chua Ready 100%, chi con 1 pod Ready/2.
+  - Cac pod con loi tap trung o `worker-1`:
+    - `backoffice-bff-*`
+    - `media-*`
+    - `search-*`
+    - `storefront-bff-*`
+- Cac muc da danh dau `hoan thanh` trong file hien chua thay lo phan tra ve.
+- Neu can cap nhat tiep, uu tien xu ly 4 nhom pod con loi tren `worker-1`, sau do kiem tra lai `coredns` readiness.
