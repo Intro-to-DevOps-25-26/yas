@@ -58,6 +58,13 @@ deploy_infra() {
   bash "$K8S_DIR/setup-keycloak.sh"
   bash "$K8S_DIR/setup-redis.sh"
   bash "$K8S_DIR/setup-cluster.sh"
+  fix_kube_proxy
+}
+
+fix_kube_proxy() {
+  kubectl apply -f "$K8S_DIR/kube-proxy-cm.yaml"
+  kubectl rollout restart ds -n kube-system kube-proxy
+  kubectl rollout status ds -n kube-system kube-proxy --timeout=60s
 }
 
 deploy_config() {
