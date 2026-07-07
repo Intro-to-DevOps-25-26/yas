@@ -2,76 +2,53 @@
 
 Ngay: 2026-07-07
 
-## 1. Backoffice BFF
+## 1. Tong Quan Hien Tai
 
-- Pod:
-  - `yas/backoffice-bff-5959897f4f-shlts`
-  - `yas/backoffice-bff-d47f896bc-m5vjn`
-- Node:
-  - `worker-1`
-- Trang thai:
-  - `CrashLoopBackOff`
-- Loi chinh:
-  - OAuth2 issuer mismatch
-  - Config dang dung `http://keycloak-service.keycloak.svc.cluster.local/realms/Yas`
-  - Keycloak metadata tra ve `http://identity.yas.local.com/realms/Yas`
-
-## 2. Media
-
-- Pod:
-  - `yas/media-65dfbbfccd-p77wm`
-  - `yas/media-fb8b4b8bd-nlp47`
-- Node:
-  - `worker-1`
-- Trang thai:
-  - `CrashLoopBackOff`
-- Loi chinh:
-  - Liquibase migration fail
-  - `relation "media" already exists`
-  - Can reset dung schema/database de chay lai DDL sach
-
-## 3. Search
-
-- Pod:
-  - `yas/search-7cf85d657-lf4ts`
-  - `yas/search-8654565bbf-npv9m`
-- Node:
-  - `worker-1`
-- Trang thai:
-  - `CrashLoopBackOff`
-- Loi chinh:
-  - Elasticsearch repository bootstrap fail
-  - `es/indices.exists` tra ve `400`
-  - Can kiem tra lai endpoint / compatibility / index bootstrap
-
-## 4. Storefront BFF
-
-- Pod:
-  - `yas/storefront-bff-6cf797d46c-99z7t`
-  - `yas/storefront-bff-7759d6f44d-qv5kg`
-- Node:
-  - `worker-3`
-- Trang thai:
-  - `CrashLoopBackOff` / `Error`
-- Loi chinh:
-  - App chua bind duoc `8090`
-  - Startup fail o buoc OAuth2 issuer resolution
-  - `UnknownHostException: identity.yas.local.com`
-  - DNS query tu pod tren `worker-3` bi timeout, trong khi pod tren `worker-1` resolve binh thuong
-  - Restart deployment chua khac phuc duoc
-
-## 5. Tong Ket Ngan
-
-- Hien chi con 4 nhom tren la chua on dinh.
-- Cac service core da on:
+- Cac service app chinh da on dinh:
+  - `backoffice-bff`
   - `customer`
   - `inventory`
+  - `media`
+  - `order`
   - `product`
+  - `search`
+  - `storefront-bff`
+  - `storefront-ui`
+  - `swagger-ui`
   - `tax`
+- Cac service ha tang chinh da Running/Ready:
   - `keycloak`
-  - `postgresql`
+  - `postgres`
   - `redis`
-  - `debezium-connect`
+  - `kafka`
   - `elasticsearch`
-- `storefront-bff` da duoc restart nhung van chua ready, nen chua the ket luan la da fix xong.
-- Cac loi con lai la loi app/config rieng cua tung service, khong con la loi pod-network hoac cluster-wide nua.
+  - `coredns`
+  - `kube-flannel`
+
+## 2. Con Lai Can Theo Doi
+
+### Pod kiem tra / one-off
+
+- `default/dns-master`: `Pending`
+- `default/master-iptables-check`: `Error`
+- `default/master-routing-check`: `Error`
+- `default/sampledata-seed-manual-cp`: `Failed`
+- `default/sampledata-seed-manual-ip`: `Failed`
+- `kafka/strimzi-cluster-operator-7bf889cd5c-9k6cr`: `Running` nhung chua `Ready` 100%
+
+### Pod cu / rollout cu
+
+- Tren `naul1-pc` con mot so pod cu cua rollout cu dang hien `Unknown`, nhung khong phai workload active hien tai:
+  - `customer-769d8454bc-5h455`
+  - `inventory-56cb4b77fb-sm8mk`
+  - `product-5ccdfdd77d-kv46d`
+  - `search-5df58bc7b7-pwfr2`
+  - `tax-c9f974f68-zm2db`
+  - `redis-replicas-1`
+
+## 3. Ket Luan Ngan
+
+- Khong con nhom app chinh nao dang CrashLoopBackOff nhu truoc.
+- `storefront-bff` da chuyen sang trang thai Running/Ready.
+- `coredns` hien tai da Ready `2/2`.
+- Cac van de con lai chu yeu la pod kiem tra, pod cu, mot so pod one-off chua clean up, va `strimzi-cluster-operator` chua Ready hoan toan.

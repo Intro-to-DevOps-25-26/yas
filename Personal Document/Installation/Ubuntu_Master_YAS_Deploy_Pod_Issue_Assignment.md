@@ -29,18 +29,14 @@ Ngay: 2026-07-06
   - `yas/product-*`: `Running`
   - `yas/tax-*`: `Running`
 - Cac pod con loi tren `worker-1` nhung thuoc scope nhom khac:
-  - `yas/backoffice-bff-5959897f4f-shlts`: `CrashLoopBackOff`
-  - `yas/backoffice-bff-d47f896bc-m5vjn`: `CrashLoopBackOff`
-  - `yas/media-65dfbbfccd-p77wm`: `CrashLoopBackOff`
-  - `yas/media-fb8b4b8bd-nlp47`: `CrashLoopBackOff`
-  - `yas/search-7cf85d657-lf4ts`: `CrashLoopBackOff`
-  - `yas/search-8654565bbf-npv9m`: `CrashLoopBackOff`
-  - `yas/storefront-bff` khong con nam tren `worker-1`; da chuyen sang `worker-3`
+  - Hien tai khong con pod app active nao loi tren `worker-1`
+  - Cac pod rollout cu/obsolete neu co da khong con thuoc scope debug chinh
 
 ### `naul1-pc` - `Luân`
 
 - `elasticsearch/elasticsearch-es-node-0`: `Running`
-- `yas` workload tren node nay da duoc giat ve `worker-1` sau khi rollout lai
+- `yas/storefront-bff-6b58dd48c7-zr2rb`: `Running`
+- Mot so pod cu cua rollout truoc con hien `Unknown`, nhung khong con la pod active
 
 ### `worker-3` - `Khoa`
 
@@ -48,9 +44,9 @@ Ngay: 2026-07-06
 - `redis/redis-replicas-0`: `Running`
 - `yas/cart-*`: `Running`
 - `yas/media-*`: `Running`
-- `yas/storefront-bff-*`: `Running` nhung chua Ready
-- `yas/storefront-bff-6cf797d46c-99z7t`: `CrashLoopBackOff` do `UnknownHostException: identity.yas.local.com`
-- `yas/storefront-bff-7759d6f44d-qv5kg`: `Error` / khong bind duoc `8090`
+- `yas/search-*`: `Running`
+- `yas/storefront-bff-*`: khong con pod active loi tren node nay
+- `strimzi-cluster-operator-7bf889cd5c-9k6cr`: `Running` nhung chua `Ready` 100%
 
 ## 3. Phan Cong Fix
 
@@ -67,29 +63,28 @@ Ngay: 2026-07-06
   - `keycloak-0` da len `Running`
   - `customer`, `inventory`, `product`, `tax` da rollout thanh cong
 - Khong con phan fix thuoc scope Hòa trong assignment ban dau.
+- Cac pod app tren `worker-1` hien da on dinh.
 
 ### `naul1-pc` - `Luân`
 
 - `elasticsearch-es-node-0` da `Running`.
-- Cac pod app lien quan da duoc chuyen ve node khac sau khi overlay on dinh.
-- Phan con lai hien chu yeu nam o `backoffice-bff`, `media`, `search`, `storefront-bff` tren `worker-1`.
+- `storefront-bff` hien dang Running/Ready tren node nay.
+- Cac pod cu cua rollout truoc con ton tai nhung khong con la workload active.
 
 ### `worker-3` - `Khoa`
 
 - `debezium-connect-cluster-connect-0` da `Running`.
 - `redis-replicas-0` da `Running`.
-- Cac pod app lien quan chua on dinh hoan toan:
-  - `storefront-bff` van fail startup do khong resolve duoc `identity.yas.local.com`
-  - can kiem tra lai DNS / route tu pod tren `worker-3` toi `10.96.0.10:53`
-- Khong the ket luan `worker-3` da hoan thanh cho toan bo workload app.
+- Cac pod app lien quan da on dinh.
+- Khong con storefront-bff loi tren `worker-3`.
 
 ## 4. Thu Tu De Xu Ly
 
 1. `master` - `Tú`: da hoan tat DNS / CoreDNS va overlay.
 2. `worker-1` - `Hòa`: da hoan thanh.
 3. `worker-3` - `Khoa`: da hoan thanh.
-4. `naul1-pc` - `Luân`: da hoan thanh cho phan node / infrastructure, nhung van co pod `Unknown` theo node hien tai.
-5. Phan con lai: debug `backoffice-bff`, `media`, `search`, `storefront-bff` tren cac node dang giu pod thuc te.
+4. `naul1-pc` - `Luân`: da hoan thanh cho phan node / infrastructure.
+5. Phan con lai: don dep pod cu va pod kiem tra.
 
 ## 5. Ghi Chu
 
@@ -144,15 +139,16 @@ Ngay: 2026-07-06
 
 ## 10. Trang Thai Doi Chieu Moi Nhat
 
-- Da doi chieu lai sau restart app gan nhat:
-  - `keycloak`, `customer`, `inventory`, `product`, `tax`, `debezium-connect-cluster-connect`, `redis-replicas`, `elasticsearch-es-node` dang o trang thai dung.
-  - `coredns` khong con la 2/2 Ready trong thuc te hien tai; co it nhat 1 pod `Unknown` o `naul1-pc`.
-  - `storefront-bff` da chuyen sang `worker-3` nhung van chua Ready:
-    - startup fail do `identity.yas.local.com` khong resolve duoc ngay trong pod
-    - restart deployment chua lam pod bind duoc `8090`
-  - Cac pod con loi tap trung o `worker-1`:
-    - `backoffice-bff-*`
-    - `media-*`
-    - `search-*`
-- Cac muc da danh dau `hoan thanh` trong file hien chua thay lo phan tra ve.
-- Neu can cap nhat tiep, uu tien xu ly `storefront-bff` tren `worker-3` va kiem tra lai DNS / service discovery, sau do moi quay lai 3 nhom pod con loi tren `worker-1`.
+- Da doi chieu lai sau cap nhat gan nhat:
+  - `keycloak`, `customer`, `inventory`, `product`, `tax`, `debezium-connect-cluster-connect`, `redis-replicas`, `elasticsearch-es-node`, `coredns`, `storefront-bff` dang o trang thai dung.
+  - Khong con nhom app chinh nao CrashLoopBackOff.
+  - Cac pod con loi chu yeu la pod cu, pod one-off, va pod test/verify:
+    - `dns-master`
+    - `master-iptables-check`
+    - `master-routing-check`
+    - `sampledata-seed-manual-cp`
+    - `sampledata-seed-manual-ip`
+    - `strimzi-cluster-operator`
+    - mot so pod rollout cu tren `naul1-pc`
+- Cac muc da danh dau `hoan thanh` trong file hien nay phu hop hon voi thuc te.
+- Neu can cap nhat tiep, uu tien don dep pod cu va pod kiem tra khong con dung nua.
