@@ -8,6 +8,15 @@ backend:
   databaseName: media
   ingress:
     enabled: false
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                  - worker-3
   extraVolumes:
     - name: media-application
       configMap:
