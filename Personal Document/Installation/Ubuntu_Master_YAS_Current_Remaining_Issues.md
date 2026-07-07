@@ -47,16 +47,18 @@ Ngay: 2026-07-07
 ## 4. Storefront BFF
 
 - Pod:
-  - `yas/storefront-bff-77d44f9f76-c84tp`
-  - `yas/storefront-bff-7bb884f4bb-czmr7`
+  - `yas/storefront-bff-6cf797d46c-99z7t`
+  - `yas/storefront-bff-7759d6f44d-qv5kg`
 - Node:
-  - `worker-1`
+  - `worker-3`
 - Trang thai:
-  - `CrashLoopBackOff` hoac `Error`
+  - `CrashLoopBackOff` / `Error`
 - Loi chinh:
-  - OAuth2 issuer mismatch
-  - Cung loi mau voi `backoffice-bff`
-  - Can dong bo lai issuer / keycloak endpoint / config YAS
+  - App chua bind duoc `8090`
+  - Startup fail o buoc OAuth2 issuer resolution
+  - `UnknownHostException: identity.yas.local.com`
+  - DNS query tu pod tren `worker-3` bi timeout, trong khi pod tren `worker-1` resolve binh thuong
+  - Restart deployment chua khac phuc duoc
 
 ## 5. Tong Ket Ngan
 
@@ -71,4 +73,5 @@ Ngay: 2026-07-07
   - `redis`
   - `debezium-connect`
   - `elasticsearch`
+- `storefront-bff` da duoc restart nhung van chua ready, nen chua the ket luan la da fix xong.
 - Cac loi con lai la loi app/config rieng cua tung service, khong con la loi pod-network hoac cluster-wide nua.

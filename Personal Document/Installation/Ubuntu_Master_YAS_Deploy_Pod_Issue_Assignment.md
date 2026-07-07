@@ -35,8 +35,7 @@ Ngay: 2026-07-06
   - `yas/media-fb8b4b8bd-nlp47`: `CrashLoopBackOff`
   - `yas/search-7cf85d657-lf4ts`: `CrashLoopBackOff`
   - `yas/search-8654565bbf-npv9m`: `CrashLoopBackOff`
-  - `yas/storefront-bff-77d44f9f76-c84tp`: `CrashLoopBackOff`
-  - `yas/storefront-bff-7bb884f4bb-czmr7`: `Error`
+  - `yas/storefront-bff` khong con nam tren `worker-1`; da chuyen sang `worker-3`
 
 ### `naul1-pc` - `Luân`
 
@@ -49,7 +48,9 @@ Ngay: 2026-07-06
 - `redis/redis-replicas-0`: `Running`
 - `yas/cart-*`: `Running`
 - `yas/media-*`: `Running`
-- `yas/storefront-bff-*`: `Running`
+- `yas/storefront-bff-*`: `Running` nhung chua Ready
+- `yas/storefront-bff-6cf797d46c-99z7t`: `CrashLoopBackOff` do `UnknownHostException: identity.yas.local.com`
+- `yas/storefront-bff-7759d6f44d-qv5kg`: `Error` / khong bind duoc `8090`
 
 ## 3. Phan Cong Fix
 
@@ -77,16 +78,18 @@ Ngay: 2026-07-06
 
 - `debezium-connect-cluster-connect-0` da `Running`.
 - `redis-replicas-0` da `Running`.
-- Cac pod app lien quan da on dinh sau khi pod-network duc thong.
-- Khong con pod loi dang thuoc scope Khoa trong assignment ban dau.
+- Cac pod app lien quan chua on dinh hoan toan:
+  - `storefront-bff` van fail startup do khong resolve duoc `identity.yas.local.com`
+  - can kiem tra lai DNS / route tu pod tren `worker-3` toi `10.96.0.10:53`
+- Khong the ket luan `worker-3` da hoan thanh cho toan bo workload app.
 
 ## 4. Thu Tu De Xu Ly
 
 1. `master` - `Tú`: da hoan tat DNS / CoreDNS va overlay.
 2. `worker-1` - `Hòa`: da hoan thanh.
 3. `worker-3` - `Khoa`: da hoan thanh.
-4. `naul1-pc` - `Luân`: da hoan thanh.
-5. Phan con lai: debug `backoffice-bff`, `media`, `search`, `storefront-bff` tren `worker-1`.
+4. `naul1-pc` - `Luân`: da hoan thanh cho phan node / infrastructure, nhung van co pod `Unknown` theo node hien tai.
+5. Phan con lai: debug `backoffice-bff`, `media`, `search`, `storefront-bff` tren cac node dang giu pod thuc te.
 
 ## 5. Ghi Chu
 
@@ -141,13 +144,15 @@ Ngay: 2026-07-06
 
 ## 10. Trang Thai Doi Chieu Moi Nhat
 
-- Da doi chieu lai sau redeploy app gan nhat:
+- Da doi chieu lai sau restart app gan nhat:
   - `keycloak`, `customer`, `inventory`, `product`, `tax`, `debezium-connect-cluster-connect`, `redis-replicas`, `elasticsearch-es-node` dang o trang thai dung.
-  - `coredns` van chua Ready 100%, chi con 1 pod Ready/2.
+  - `coredns` khong con la 2/2 Ready trong thuc te hien tai; co it nhat 1 pod `Unknown` o `naul1-pc`.
+  - `storefront-bff` da chuyen sang `worker-3` nhung van chua Ready:
+    - startup fail do `identity.yas.local.com` khong resolve duoc ngay trong pod
+    - restart deployment chua lam pod bind duoc `8090`
   - Cac pod con loi tap trung o `worker-1`:
     - `backoffice-bff-*`
     - `media-*`
     - `search-*`
-    - `storefront-bff-*`
 - Cac muc da danh dau `hoan thanh` trong file hien chua thay lo phan tra ve.
-- Neu can cap nhat tiep, uu tien xu ly 4 nhom pod con loi tren `worker-1`, sau do kiem tra lai `coredns` readiness.
+- Neu can cap nhat tiep, uu tien xu ly `storefront-bff` tren `worker-3` va kiem tra lai DNS / service discovery, sau do moi quay lai 3 nhom pod con loi tren `worker-1`.
