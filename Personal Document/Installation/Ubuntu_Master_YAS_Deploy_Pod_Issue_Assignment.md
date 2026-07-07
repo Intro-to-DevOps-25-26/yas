@@ -13,7 +13,12 @@ Ngay: 2026-07-06
 
 ### `master` - `Tú`
 
-- `kube-system/coredns-bb64d546d-gmzpc`: `0/1 Running`, DNS service chua on dinh
+- CoreDNS da duoc pin sang worker node va da dat `2/2 Ready`
+- Pod network tren master da duoc fix:
+  - `kube-apiserver` advertise ve `192.168.2.16`
+  - `Endpoints/default/kubernetes` tro ve `192.168.2.16`
+  - `ufw` da mo `6443/tcp` cho `10.244.0.0/16`
+  - pod tren master da chạm duoc `10.96.0.1:443`
 
 ### `worker-1` - `Hòa`
 
@@ -50,9 +55,10 @@ Ngay: 2026-07-06
 
 ### `master` - `Tú`
 
-- Kiem tra va fix `CoreDNS` / `kube-dns` de DNS cluster hoi phuc.
+- DNS cluster da hoi phuc.
+- Pod network tren master da on dinh lai cho service `kubernetes`/API server.
 - Xac minh service discovery cho `postgresql`, `kafka-cluster-kafka-bootstrap`, `redis-master`, `keycloak-service`.
-- Sau khi DNS on, restart lai cac pod backend dang phu thuoc DNS.
+- Neu co thay doi infra, chi can kiem tra lai DNS/service discovery va rollout cac pod backend dang phu thuoc.
 
 ### `worker-1` - `Hòa`
 
@@ -76,7 +82,7 @@ Ngay: 2026-07-06
 
 ## 4. Thu Tu De Xu Ly
 
-1. `master` - `Tú`: hoan tat DNS / CoreDNS va overlay.
+1. `master` - `Tú`: da hoan tat DNS / CoreDNS va overlay.
 2. `worker-1` - `Hòa`: da hoan thanh.
 3. `worker-3` - `Khoa`: da hoan thanh.
 4. `naul1-pc` - `Luân`: da hoan thanh.
@@ -98,6 +104,7 @@ Ngay: 2026-07-06
 ## 7. Checklist Cuc Ngan
 
 - `master` sua: chart, manifest, config deploy, lenh `kubectl`, script rollout va verify cluster.
+- `master` da sua them phan host firewall va apiserver advertise IP de pod network chay lai.
 - `worker` pull: cung branch/commit voi `master`, sau do moi sua code app hoac debug local.
 - Duoc debug tiep khi: worker da `git pull`, restart service/pod can test, va log/status tren worker khop voi ban vua sua.
 - Luu y khi debug worker: thay doi tren worker khong lam cluster tren `master` tu dong doi theo; phai deploy/rebuild/rollout lai thi moi biet co hoat dong hay chua.
