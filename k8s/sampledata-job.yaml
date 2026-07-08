@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: trigger-sampledata-job
+  namespace: yas
+spec:
+  template:
+    metadata:
+      labels:
+        app: sampledata-trigger
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sh", "-c"]
+        # Trigger the sampledata endpoint. The service name is 'sampledata' and port is 80.
+        args: ["curl -X POST -v -L http://sampledata.yas.svc.cluster.local:80/sampledata/ || true"]
+      restartPolicy: Never
+  backoffLimit: 4

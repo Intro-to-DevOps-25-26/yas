@@ -17,3 +17,5 @@ backend:
       mountPath: /opt/yas/sampledata
   extraApplicationConfigPaths:
     - /opt/yas/sampledata/sampledata-application.yaml
+  serviceMonitor:
+    enabled: false
