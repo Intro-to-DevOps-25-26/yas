@@ -42,3 +42,18 @@ Checklist ngan gon cho master truoc khi deploy YAS bang Helm.
 - `yas-configuration` da xong
 - `sampledata` da duoc seed thu cong 1 lan, khong giu Job chay dai
 - Cac pod can tiep tuc theo doi: `keycloak`, `elasticsearch`, `redis-replicas`, `debezium-connect`, mot so app backend con dang crashloop do dependency chua on dinh
+
+## 5. Neu chot scope nang cao
+
+- [ ] Chot `ArgoCD` lam cong cu quan ly `dev` va `staging`
+- [ ] Tao app/project rieng cho `dev` va `staging`
+- [ ] Day `main` vao namespace `dev`
+- [ ] Day release tag (`v1.2.3`...) vao namespace `staging`
+- [ ] Chot `Istio` cho service mesh
+- [ ] Bat `mTLS` giua cac service
+- [ ] Cau hinh `PeerAuthentication` / `DestinationRule`
+- [ ] Cau hinh `AuthorizationPolicy` gioi han service-to-service
+- [ ] Cau hinh `VirtualService` retry + timeout cho loi 500
+- [ ] Lay screenshot Kiali topology
+- [ ] Test bang `kubectl exec` + `curl`
+- [ ] Cap nhat README huong dan tung buoc neu lam service mesh

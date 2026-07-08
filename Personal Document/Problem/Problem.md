@@ -72,6 +72,14 @@ Sau khi deploy tren K8S:
 - Developer se tu them `hosts` tren may minh de tro domain ve worker node
 - Neu can test noi bo, co the truy cap thong qua IP node + NodePort
 
+Cach test web app:
+
+- `swagger-ui`: `http://<worker-ip>:32044/`
+- `storefront-ui`: `http://<worker-ip>:30179/`
+- `backoffice-ui`: `http://<worker-ip>:31790/`
+- Neu da map `hosts`, co the dung domain tuong ung thay cho `<worker-ip>`
+- Khi test qua may khac mang, co the dung IP Tailscale cua worker thay cho IP LAN neu route LAN khong on dinh
+
 ### 3.4 Ket noi node qua Tailscale
 
 Vi cac may khong cung mang, dung `Tailscale` de noi cac node trong cung 1 cluster.
@@ -124,9 +132,81 @@ Quy tac chot:
 5. Tao manifest `Deployment`, `Service`, `Job`
 6. Expose service bang `NodePort`
 7. Cap nhat `hosts`
-8. Hoan thien GitHub Actions CD de build, push, deploy, cleanup
-9. Lam `dev/staging` neu chot scope nang cao
-10. Lam service mesh nang cao bat buoc, observability chi giu neu can
+8. Mo web app de test:
+   - `swagger-ui` -> `http://<worker-ip>:32044/`
+   - `storefront-ui` -> `http://<worker-ip>:30179/`
+   - `backoffice-ui` -> `http://<worker-ip>:31790/`
+9. Hoan thien GitHub Actions CD de build, push, deploy, cleanup
+10. Lam `dev/staging` neu chot scope nang cao
+11. Lam service mesh nang cao bat buoc, observability chi giu neu can
+
+### 3.8 Tien do hien tai
+
+- Da hoan thanh phan lon hoat dong deploy tren K8S:
+  - cluster `1 master + 3 worker` da len on dinh
+  - `Tailscale` da noi cac node trong cung mot tailnet
+  - `CoreDNS` da khong con loi `NXDOMAIN` cho `identity.yas.local.com`
+  - cac service chinh da Running/Ready
+  - `storefront-bff` da bind duoc va chay on dinh
+- Da co the test truy cap qua `NodePort` cho cac service demo chinh
+- Web app demo hien co the mo bang browser qua:
+  - `swagger-ui`: `http://<worker-ip>:32044/`
+  - `storefront-ui`: `http://<worker-ip>:30179/`
+  - `backoffice-ui`: `http://<worker-ip>:31790/`
+- `sampledata` da seed thu cong thanh cong, khong con blocked
+
+### 3.9 Task con lai
+
+- Don dep cac pod kiem tra / one-off / rollout cu khong con dung nua
+- Chot scope nang cao theo huong sau:
+  - CI/CD chot dung `GitHub Actions`
+  - `main` thay doi thi auto deploy vao namespace `dev`
+  - release tag nhu `v1.2.3` thi build image theo tag do va deploy vao namespace `staging`
+  - co job/flow deploy theo branch cho developer build
+  - co cleanup job de xoa ban deploy cu
+  - `sampledata` giu dang seed mot lan, khong chay lau dai
+  - service mesh chot dung `Istio` + `Kiali`
+  - bat `mTLS`, `AuthorizationPolicy`, `VirtualService` retry/timeout
+  - test bang `kubectl exec` + `curl`, va chup topology Kiali lam bang chung
+- Observability (`Grafana`, `Prometheus`, `Loki`, `Tempo`) khong chot trong scope co ban, chi lam neu co them thoi gian hoac can demo nang cao
+- Hoan thien checklist/CD theo scope da chot:
+  - build image theo branch / commit / tag
+  - push len Docker Hub
+  - deploy vao K8S dung namespace phu hop
+  - cung cap dia chi truy cap sau deploy
+  - co cleanup job cho ban deploy cu
+
+### 3.10 Phan cong 4 nguoi
+
+Muc tieu la 4 nguoi lam song song, moi nguoi co 1 trach nhiem ro rang, khong doi nhau xong moi bat dau.
+
+| Nguoi | Viec chinh | Deliverables |
+|---|---|---|
+| `Tú` | Chot `ArgoCD` cho `dev/staging`, gom app/project, sync policy, rollback | Screenshot ArgoCD sync/health, manifest namespace/project, ghi chu flow `dev` va `staging` |
+| `Hòa` | Lam `Istio` service mesh cho namespace app, bat `mTLS`, `AuthorizationPolicy`, `VirtualService` retry/timeout | YAML policy, screenshot Kiali topology, log `curl` test cho retry / allow / deny |
+| `Luân` | Hoan thien GitHub Actions CD cho build/push/deploy/cleanup, gom job `developer_build` va job cleanup | Screenshot workflow run, log build/push, manifest/job deploy, ghi chu cach map branch/tag |
+| `Khoa` | Don dep pod kiem tra / pod cu / rollout cu, test `NodePort`, doi chieu web app, ho tro tong hop report va screenshot | Screenshot `kubectl get pods -A -o wide`, screenshot NodePort truy cap UI, checklist pod da clean, bang tong hop trang thai |
+
+#### Can chup man hinh
+
+- `kubectl get nodes -o wide`
+- `kubectl get pods -A -o wide`
+- `kubectl get svc -n yas`
+- `ArgoCD` app sync/healthy cho `dev` va `staging`
+- `Kiali` topology sau khi bat mesh
+- Ket qua `curl` / browser khi test `swagger-ui`, `storefront-ui`, `backoffice-ui`
+- GitHub Actions workflow run cho build/deploy/cleanup
+- `Khoa` tong hop screenshot trang thai pod / NodePort / web app de dua vao report
+
+#### Can viet report
+
+- Tom tat cluster hien tai va ai phu trach phan nao
+- Cach deploy `dev/staging` bang `ArgoCD`
+- Cach cau hinh `Istio` va test mTLS / policy / retry
+- Cach test web app qua `NodePort`
+- Cach build/push/deploy/cleanup bang GitHub Actions
+- Danh sach pod one-off / pod cu da dọn
+- Phan tong hop trang thai test web app va NodePort do `Khoa` phu trach
 
 ## 4. CI/CD yeu cau
 
@@ -185,6 +265,11 @@ Neu lam phan nang cao:
 Phuong an nang cao:
 
 - dung ArgoCD de quan ly `dev` va `staging`
+- ArgoCD sync tu Git repo, khong deploy thu cong vao 2 namespace nang cao nay
+- moi namespace co app/project rieng:
+  - `dev`: auto sync cho branch main / integration
+  - `staging`: sync theo release tag / release branch
+- neu can rollback thi rollback bang revision cua ArgoCD, khong sua tay tren cluster
 
 ### 5.3 CD chot su dung GitHub Actions
 
@@ -201,17 +286,25 @@ Voi scope hien tai, chot su dung GitHub Actions cho CD.
 
 Phan nang cao service mesh la phan can lam trong scope do an:
 
+- chot dung `Istio` lam service mesh
 - bat mTLS giua cac service deploy tren K8S
+- cau hinh `PeerAuthentication` va `DestinationRule` de bat mTLS toan mesh hoac theo namespace
 - cau hinh `AuthorizationPolicy` de gioi han service-to-service access
-- cau hinh `VirtualService` retry cho loi 500
-- dung Kiali de quan sat topology
+- cau hinh `VirtualService` retry + timeout cho loi 500
+- dung `Kiali` de quan sat topology
 - test bang `kubectl exec` va `curl`
+- deliverables can co:
+  - YAML manifest cho mTLS va authorization policy
+  - screenshot Kiali topology
+  - test plan + log curl/retry
+  - README huong dan tung buoc
 
 ## 6. Service Mesh nang cao
 
 Neu lam phan service mesh:
 
 - bat mTLS giua cac service
+- cau hinh `PeerAuthentication` / `DestinationRule`
 - cau hinh `AuthorizationPolicy`
 - cau hinh `VirtualService` retry cho luong loi 500
 - dung Kiali de xem topology

@@ -33,3 +33,16 @@
 - Neu app doi image thi phai build/push image truoc khi redeploy.
 - Neu chi sua local tren worker ma chua commit/push, `master` redeploy se van dung source cu.
 - Sau deploy, xem `kubectl rollout status` va `kubectl logs` de xac nhan pod da on dinh.
+
+## Scope nang cao neu chot
+
+- `ArgoCD` se dung de quan ly `dev` va `staging`, khong deploy thu cong vao 2 namespace nay nua
+- `dev` auto sync tu branch chinh hoac branch integration
+- `staging` sync theo release tag
+- Neu lam service mesh:
+  - cai `Istio`
+  - bat `mTLS`
+  - them `AuthorizationPolicy`
+  - them `VirtualService` retry/timeout
+  - quan sat topology bang `Kiali`
+- Test service mesh bang `kubectl exec` + `curl`, ghi log va screenshot lam bang chung
