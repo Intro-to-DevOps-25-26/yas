@@ -8,6 +8,12 @@ on:
     branches:
       - "main"
   workflow_dispatch:
+    inputs:
+      tag_latest:
+        description: 'Tag images as latest (allows on any branch)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -368,13 +374,25 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Generate Docker tags
+        id: docker-tags
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        shell: bash
+        run: |
+          BASE="${{ secrets.DOCKER_USERNAME }}/yas-${{ matrix.service }}"
+          TAGS="$BASE:${{ github.sha }}"
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            TAGS="$TAGS,$BASE:latest"
+          fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
       - name: Build and push Docker image
         if: steps.check-dockerfile.outputs.exists == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./${{ matrix.service }}
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/yas-${{ matrix.service }}:${{ github.sha }}
+          tags: ${{ steps.docker-tags.outputs.tags }}
 
   test-summary:
     name: Test Summary
