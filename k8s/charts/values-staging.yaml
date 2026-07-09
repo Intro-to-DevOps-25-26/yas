@@ -1,0 +1,16 @@
+# Shared overrides for staging testing.
+# Apply together with each chart's base values.yaml.
+
+backend:
+  image:
+    tag: "staging-fixed"
+
+ui:
+  image:
+    tag: "staging-fixed"
+  service:
+    type: NodePort
+
+sampledata:
+  image:
+    tag: "16.3-alpine"

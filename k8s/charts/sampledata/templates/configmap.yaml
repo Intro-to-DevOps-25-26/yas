@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sampledata.fullname" . }}-scripts
+  labels:
+    {{- include "sampledata.labels" . | nindent 4 }}
+data:
+  {{ .Values.sampledata.scripts.product }}: |
+    {{- .Files.Get "files/db/product/product.sql" | nindent 4 }}
+  {{ .Values.sampledata.scripts.media }}: |
+    {{- .Files.Get "files/db/media/media.sql" | nindent 4 }}

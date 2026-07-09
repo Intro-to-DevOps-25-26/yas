@@ -1,21 +1,32 @@
-backend:
+sampledata:
   image:
-    repository: ghcr.io/nashtech-garage/yas-sampledata
-    tag: latest
+    repository: postgres
+    tag: "16.3-alpine"
+    pullPolicy: IfNotPresent
 
   nameOverride: sampledata
   fullnameOverride: sampledata
-  databaseName: sampledata
-  ingress:
-    enabled: false
-  extraVolumes:
-    - name: sampledata-application
-      configMap:
-        name: sampledata-application-configmap
-  extraVolumeMounts:
-    - name: sampledata-application
-      mountPath: /opt/yas/sampledata
-  extraApplicationConfigPaths:
-    - /opt/yas/sampledata/sampledata-application.yaml
-  serviceMonitor:
-    enabled: false
+
+  job:
+    backoffLimit: 1
+    ttlSecondsAfterFinished: 300
+
+  database:
+    host: postgresql.postgres.svc.cluster.local
+    port: 5432
+    usernameSecret: yas-postgresql-credentials-secret
+    productName: product
+    mediaName: media
+
+  scripts:
+    product: product.sql
+    media: media.sql
+
+  resources: {}
+
+  podSecurityContext: {}
+  securityContext: {}
+
+serviceAccount:
+  create: false
+  name: ""

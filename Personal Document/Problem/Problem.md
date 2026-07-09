@@ -122,6 +122,7 @@ Quy tac chot:
 - `NodePort` chi dung cho 3 service demo chinh: `swagger-ui`, `storefront-ui`, `backoffice-ui`
 - `ClusterIP` cho tat ca service con lai de giu cluster gon va an toan
 - `sampledata` khong chay lau dai, phai la `Job`
+- Neu chon dung `Ingress` cho `swagger-ui` thi phai co du route toi cac API docs backend (`/product`, `/order`, `/tax`, ...) hoac co gateway trung gian, neu khong Swagger UI se khong load duoc danh sach API definition.
 
 ### 3.7 Trinh tu task
 
@@ -154,6 +155,8 @@ Quy tac chot:
   - `storefront-ui`: `http://<worker-ip>:30179/`
   - `backoffice-ui`: `http://<worker-ip>:31790/`
 - `sampledata` da seed thu cong thanh cong, khong con blocked
+- `sampledata` chart da duoc scaffold lai thanh Job seed 1 lan
+- Da co overlay values chung cho `dev` / `staging` de pin tag va test NodePort cho UI
 
 ### 3.9 Task con lai
 
@@ -766,6 +769,25 @@ Thu tu uu tien:
 - Kiem tra manifest/chart da on dinh truoc khi ArgoCD sync
 - Chup screenshot ArgoCD sync/health va tong hop flow `dev` / `staging`
 
+##### Phan cong 3 muc cho Tú
+
+- `Lam ngay`
+  - Chuan hoa chart/manifest core cho `Deployment`, `Service`, `Job`
+  - Tach `values.yaml` cho `dev` va `staging`
+  - Viet ban dau `ArgoCD Application`/`AppProject` va sync policy skeleton
+  - Kiem tra service name, selector, port, probe, namespace co hop le
+  - Chot checklist screenshot can chup cho chart va ArgoCD
+- `Lam tam bang tag co dinh`
+  - Dung image tag co dinh de test sync/rollback khi chua co CI/CD on dinh
+  - Test `helm template` / `helm upgrade` thu cong voi tag co san
+  - Dung manifest da on dinh de verify ArgoCD sync khong bi lech
+  - Kiem tra rollout va rollback voi tag thu cong
+- `Cho Luan xong moi chot`
+  - Mapping image tag theo branch/commit/release tu CI/CD
+  - Auto sync cho `dev` va quy tac release cho `staging`
+  - Cleanup job lien ket voi flow deploy moi
+  - Screenshot end-to-end CI -> ArgoCD -> rollout
+
 #### Luân: CI/CD build/push/deploy/cleanup
 
 - Hoan thien GitHub Actions cho build/push image theo commit/tag/branch
@@ -793,6 +815,7 @@ Thu tu uu tien:
 ### 15.3 Thu tu lam
 
 - [ ] Chat luong chart/manifest va health check truoc
+- [x] Chay audit chart/manifest theo `Tu_Chart_Manifest_Audit.md`
 - [ ] Build/push/deploy/cleanup tiep theo
 - [ ] Rollout/rollback + NodePort + hosts/test route
 - [ ] ArgoCD `dev` / `staging` sau cung khi manifest/chart da on dinh

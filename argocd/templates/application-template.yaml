@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: <app-name>-<env>
+  namespace: argocd
+spec:
+  project: <project-name>
+  source:
+    repoURL: https://github.com/Intro-to-DevOps-25-26/yas.git
+    targetRevision: main
+    path: k8s/charts/<chart-name>
+    helm:
+      releaseName: <release-name>
+      valueFiles:
+        - values.yaml
+        # - values-<env>.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: <target-namespace>
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: false
+      selfHeal: false
+

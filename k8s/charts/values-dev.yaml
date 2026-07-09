@@ -1,0 +1,16 @@
+# Shared overrides for dev testing.
+# Apply together with each chart's base values.yaml.
+
+backend:
+  image:
+    tag: "dev-fixed"
+
+ui:
+  image:
+    tag: "dev-fixed"
+  service:
+    type: NodePort
+
+sampledata:
+  image:
+    tag: "16.3-alpine"

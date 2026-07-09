@@ -66,6 +66,54 @@ ingress:
       paths:
         - path: /swagger-ui
           pathType: ImplementationSpecific
+        - path: /product
+          pathType: Prefix
+          serviceName: product
+          servicePort: 80
+        - path: /media
+          pathType: Prefix
+          serviceName: media
+          servicePort: 80
+        - path: /customer
+          pathType: Prefix
+          serviceName: customer
+          servicePort: 80
+        - path: /cart
+          pathType: Prefix
+          serviceName: cart
+          servicePort: 80
+        - path: /rating
+          pathType: Prefix
+          serviceName: rating
+          servicePort: 80
+        - path: /order
+          pathType: Prefix
+          serviceName: order
+          servicePort: 80
+        - path: /payment
+          pathType: Prefix
+          serviceName: payment
+          servicePort: 80
+        - path: /location
+          pathType: Prefix
+          serviceName: location
+          servicePort: 80
+        - path: /inventory
+          pathType: Prefix
+          serviceName: inventory
+          servicePort: 80
+        - path: /tax
+          pathType: Prefix
+          serviceName: tax
+          servicePort: 80
+        - path: /promotion
+          pathType: Prefix
+          serviceName: promotion
+          servicePort: 80
+        - path: /search
+          pathType: Prefix
+          serviceName: search
+          servicePort: 80
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
