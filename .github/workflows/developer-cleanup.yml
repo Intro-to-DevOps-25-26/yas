@@ -11,20 +11,17 @@ on:
           - cart
           - customer
           - inventory
-          - location
           - media
           - order
-          - payment
-          - payment-paypal
           - product
-          - promotion
-          - rating
-          - recommendation
           - search
           - tax
-          - webhook
           - storefront-bff
           - backoffice-bff
+          - storefront-ui
+          - backoffice-ui
+          - swagger-ui
+          - sampledata
 
 jobs:
   cleanup:
@@ -69,15 +66,38 @@ jobs:
 
       - name: Rollback service to latest (ClusterIP + Ingress)
         run: |
-          helm upgrade --install ${{ github.event.inputs.dev_service }} \
-            k8s/charts/${{ github.event.inputs.dev_service }} \
-            --namespace yas --create-namespace \
-            --set backend.image.repository=${{ secrets.DOCKER_USERNAME }}/yas-${{ github.event.inputs.dev_service }} \
-            --set backend.image.tag=latest \
-            --set backend.service.type=ClusterIP \
-            --set backend.ingress.enabled=true \
-            --set backend.ingress.host="api.${{ steps.config.outputs.domain }}" \
-            --set backend.serviceMonitor.enabled=false
+          SERVICE=${{ github.event.inputs.dev_service }}
+          DOMAIN=${{ steps.config.outputs.domain }}
+          REPO=${{ secrets.DOCKER_USERNAME }}/yas-$SERVICE
+
+          # Determine chart type prefix
+          case "$SERVICE" in
+            storefront-ui|backoffice-ui) PREFIX="ui" ;;
+            swagger-ui) PREFIX="" ;;
+            *) PREFIX="backend" ;;
+          esac
+
+          # Determine ingress host based on service type
+          case "$SERVICE" in
+            storefront-ui|storefront-bff) INGRESS_HOST="storefront.$DOMAIN" ;;
+            backoffice-ui|backoffice-bff) INGRESS_HOST="backoffice.$DOMAIN" ;;
+            *) INGRESS_HOST="api.$DOMAIN" ;;
+          esac
+
+          # Build dynamic --set flags
+          SETS="--set ${PREFIX:+"$PREFIX."}image.repository=$REPO"
+          SETS="$SETS --set ${PREFIX:+"$PREFIX."}image.tag=latest"
+          SETS="$SETS --set ${PREFIX:+"$PREFIX."}serviceMonitor.enabled=false"
+
+          # Service type & ingress (Jobs like sampledata don't need service)
+          if [ "$SERVICE" != "sampledata" ]; then
+            SETS="$SETS --set ${PREFIX:+"$PREFIX."}service.type=ClusterIP"
+            SETS="$SETS --set ${PREFIX:+"$PREFIX."}ingress.enabled=true"
+            SETS="$SETS --set ${PREFIX:+"$PREFIX."}ingress.host=$INGRESS_HOST"
+          fi
+
+          helm upgrade --install "$SERVICE" "k8s/charts/$SERVICE" \
+            --namespace yas --create-namespace $SETS
 
       - name: Verify reset
         run: |
