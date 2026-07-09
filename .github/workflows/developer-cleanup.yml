@@ -63,12 +63,9 @@ jobs:
       - name: Build Helm dependencies
         run: helm dependency build k8s/charts/${{ github.event.inputs.dev_service }}
 
-      - name: Clear managedFields conflicts
-        run: |
-          kubectl patch deployment ${{ github.event.inputs.dev_service }} -n yas \
-            --type json -p='[{"op": "remove", "path": "/metadata/managedFields"}]' || true
-
       - name: Rollback service to latest (ClusterIP + Ingress)
+        env:
+          HELM_DRIVER: configmap
         run: |
           helm upgrade --install ${{ github.event.inputs.dev_service }} \
             k8s/charts/${{ github.event.inputs.dev_service }} \
