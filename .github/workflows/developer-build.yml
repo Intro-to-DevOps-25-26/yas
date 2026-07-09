@@ -87,7 +87,8 @@ jobs:
             --set backend.image.repository=${{ secrets.DOCKER_USERNAME }}/yas-${{ github.event.inputs.dev_service }} \
             --set backend.image.tag=${{ steps.sha.outputs.sha }} \
             --set backend.service.type=NodePort \
-            --set backend.ingress.enabled=false
+            --set backend.ingress.enabled=false \
+            --set backend.serviceMonitor.enabled=false
 
       - name: Get NodePort and node IP
         id: svc-info

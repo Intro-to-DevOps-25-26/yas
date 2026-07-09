@@ -72,7 +72,8 @@ jobs:
             --set backend.image.tag=latest \
             --set backend.service.type=ClusterIP \
             --set backend.ingress.enabled=true \
-            --set backend.ingress.host="api.${{ steps.config.outputs.domain }}"
+            --set backend.ingress.host="api.${{ steps.config.outputs.domain }}" \
+            --set backend.serviceMonitor.enabled=false
 
       - name: Verify reset
         run: |
