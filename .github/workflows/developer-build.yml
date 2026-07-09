@@ -45,6 +45,19 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
+      - name: Debug Tailscale connectivity
+        run: |
+          echo "=== TAILSCALE STATUS ==="
+          tailscale status
+          echo "=== PING MASTER ==="
+          tailscale ping --c 3 100.86.160.41 || true
+          echo "=== PING WORKER (my machine) ==="
+          tailscale ping --c 3 100.86.112.38 || true
+          echo "=== IP ROUTE ==="
+          ip route get 100.86.160.41
+          echo "=== CURL K8S API ==="
+          curl -m 10 -sk https://100.86.160.41:6443/healthz || echo "CURL FAILED"
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
