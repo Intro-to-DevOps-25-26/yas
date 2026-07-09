@@ -63,9 +63,11 @@ jobs:
       - name: Build Helm dependencies
         run: helm dependency build k8s/charts/${{ github.event.inputs.dev_service }}
 
+      - name: Delete existing deployment to avoid SSA conflicts
+        run: |
+          kubectl delete deployment ${{ github.event.inputs.dev_service }} -n yas --ignore-not-found --wait=true
+
       - name: Rollback service to latest (ClusterIP + Ingress)
-        env:
-          HELM_DRIVER: configmap
         run: |
           helm upgrade --install ${{ github.event.inputs.dev_service }} \
             k8s/charts/${{ github.event.inputs.dev_service }} \
