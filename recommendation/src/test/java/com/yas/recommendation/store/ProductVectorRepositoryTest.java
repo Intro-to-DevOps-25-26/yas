@@ -10,8 +10,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.azure.ai.openai.OpenAIClient;
-import com.yas.recommendation.config.KafkaIntegrationTestConfiguration;
+import tools.jackson.databind.ObjectMapper;
 import com.yas.recommendation.configuration.EmbeddingSearchConfiguration;
 import com.yas.recommendation.service.ProductService;
 import com.yas.recommendation.vector.product.document.ProductDocument;
@@ -22,40 +21,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.test.util.ReflectionTestUtils;
 
-@Testcontainers
-@SpringBootTest
-@Import(KafkaIntegrationTestConfiguration.class)
-@TestPropertySource("classpath:application-test.properties")
-public class ProductVectorRepositoryTest extends BaseVectorRepositoryTest<ProductDocument, ProductDetailVm> {
+@ExtendWith(MockitoExtension.class)
+class ProductVectorRepositoryTest extends BaseVectorRepositoryTest<ProductDocument, ProductDetailVm> {
 
     @Mock
-    private OpenAIClient openAIClient;
-
-    @MockitoBean
     private VectorStore vectorStore;
 
-    @MockitoBean
+    @Mock
     private ProductService productService;
 
-    @Autowired
+    @InjectMocks
     private ProductVectorRepository productVectorRepository;
 
-    @Autowired
-    private EmbeddingSearchConfiguration embeddingSearchConf;
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(productVectorRepository, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(productVectorRepository, "embeddingSearchConfiguration", new EmbeddingSearchConfiguration(0.0, 10));
+    }
 
     public ProductVectorRepositoryTest() {
         super(ProductDocument.class);
@@ -71,14 +66,11 @@ public class ProductVectorRepositoryTest extends BaseVectorRepositoryTest<Produc
     @DisplayName("When deleting document, provided doc id must be format as metadata defined")
     @Test
     public void testDeleteDocument() {
-        // Given
         var productId = 1L;
 
-        // When
         doReturn(Optional.of(true)).when(vectorStore).delete(anyList());
         productVectorRepository.delete(productId);
 
-        // Then
         ArgumentCaptor<List<String>> docIdsCaptor = ArgumentCaptor.forClass(List.class);
         verify(vectorStore, times(1)).delete(docIdsCaptor.capture());
         var expectedId = productVectorRepository.getIdGenerator(productId).generateId();
@@ -92,18 +84,15 @@ public class ProductVectorRepositoryTest extends BaseVectorRepositoryTest<Produc
     @DisplayName("When performing search similarity, search query must be handle correctly")
     @Test
     public void testSearchDocument() {
-        // Given
         var productId = 1L;
         ProductDetailVm searchedProduct = getProductDetailVm(productId);
 
-        // When
         when(productService.getProductDetail(productId)).thenReturn(searchedProduct);
 
         Document similarDocument = new Document("content", Map.of("id", "2"));
         doReturn(List.of(similarDocument)).when(vectorStore).similaritySearch(any(SearchRequest.class));
         List<ProductDocument> productDocuments = productVectorRepository.search(productId);
 
-        // Then
         ArgumentCaptor<SearchRequest> searchRequestCaptor = ArgumentCaptor.forClass(SearchRequest.class);
         verify(vectorStore).similaritySearch(searchRequestCaptor.capture());
         assertSearchRequest(searchRequestCaptor.getValue(), searchedProduct);
@@ -118,16 +107,13 @@ public class ProductVectorRepositoryTest extends BaseVectorRepositoryTest<Produc
     @DisplayName("When creating document, document must be created as metadata defined")
     @Test
     public void testAddDocument() {
-        // Given
         var productId = 1L;
         ProductDetailVm productDetailVm = getProductDetailVm(productId);
 
-        // When
         when(productService.getProductDetail(productId)).thenReturn(productDetailVm);
         doNothing().when(vectorStore).add(anyList());
         productVectorRepository.add(productId);
 
-        // Then
         ArgumentCaptor<List<Document>> docsCaptor = ArgumentCaptor.forClass(List.class);
         verify(vectorStore, times(1)).add(docsCaptor.capture());
         assertFalse(docsCaptor.getValue().isEmpty(), "Document must be added");
