@@ -8,8 +8,7 @@ import com.yas.search.repository.ProductRepository;
 import com.yas.search.viewmodel.ProductEsDetailVm;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.logging.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -18,7 +17,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequiredArgsConstructor
 public class ProductSyncDataService {
 
-    private final Logger log = LoggerFactory.getLogger(ProductSyncDataService.class);
+    private static final Logger LOGGER = Logger.getLogger(ProductSyncDataService.class.getName());
 
     private final RestClient restClient;
     private final ServiceUrlConfig serviceUrlConfig;
@@ -83,7 +82,7 @@ public class ProductSyncDataService {
         if (isProductExisted) {
             productRepository.deleteById(id);
         } else {
-            log.warn("Product {} doesn't exist in Elasticsearch.", id);
+            LOGGER.warning("Product " + id + " doesn't exist in Elasticsearch.");
         }
     }
 }

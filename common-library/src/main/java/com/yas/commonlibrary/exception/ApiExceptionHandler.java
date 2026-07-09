@@ -3,7 +3,8 @@ package com.yas.commonlibrary.exception;
 import com.yas.commonlibrary.viewmodel.error.ErrorVm;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +18,8 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 @ControllerAdvice
-@Slf4j
 public class ApiExceptionHandler {
+    private static final Logger LOGGER = Logger.getLogger(ApiExceptionHandler.class.getName());
     private static final String ERROR_LOG_FORMAT = "Error: URI: {}, ErrorCode: {}, Message: {}";
     private static final String INVALID_REQUEST_INFORMATION_MESSAGE = "Request information is not valid";
 
@@ -99,7 +100,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(InternalServerErrorException.class)
     protected ResponseEntity<ErrorVm> handleInternalServerErrorException(InternalServerErrorException e) {
-        log.error("Internal server error exception: ", e);
+        LOGGER.log(Level.SEVERE, "Internal server error exception", e);
         ErrorVm errorVm = new ErrorVm(HttpStatus.INTERNAL_SERVER_ERROR.toString(),
             HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage());
         return ResponseEntity.internalServerError().body(errorVm);
@@ -175,9 +176,10 @@ public class ApiExceptionHandler {
             new ErrorVm(status.toString(), status.getReasonPhrase(), message, errors);
 
         if (request != null) {
-            log.error(ERROR_LOG_FORMAT, this.getServletPath(request), statusCode, message);
+            LOGGER.log(Level.SEVERE,
+                String.format(ERROR_LOG_FORMAT, this.getServletPath(request), statusCode, message));
         }
-        log.error(message, ex);
+        LOGGER.log(Level.SEVERE, message, ex);
         return ResponseEntity.status(status).body(errorVm);
     }
 }

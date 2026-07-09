@@ -12,28 +12,22 @@ import com.yas.recommendation.vector.common.document.BaseDocument;
 import com.yas.recommendation.vector.common.document.DocumentMetadata;
 import com.yas.recommendation.vector.common.formatter.DocumentFormatter;
 import java.util.Map;
-import lombok.Getter;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Assertions;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.filter.Filter;
-import org.springframework.beans.factory.annotation.Autowired;
 
 public class BaseVectorRepositoryTest<D extends BaseDocument, E> {
 
     private final Class<D> docClass;
     private final DocumentMetadata documentMetadata;
 
-    @Getter
     private final DocumentFormatter documentFormatter;
 
-    @Getter
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    private EmbeddingSearchConfiguration embeddingSearchConf;
+    private final EmbeddingSearchConfiguration embeddingSearchConf;
 
     @SneakyThrows
     public BaseVectorRepositoryTest(Class<D> docClass) {
@@ -44,6 +38,12 @@ public class BaseVectorRepositoryTest<D extends BaseDocument, E> {
             .documentFormatter()
             .getDeclaredConstructor()
             .newInstance();
+        this.objectMapper = new ObjectMapper();
+        this.embeddingSearchConf = new EmbeddingSearchConfiguration(0.0, 10);
+    }
+
+    public ObjectMapper getObjectMapper() {
+        return objectMapper;
     }
 
     public DocumentMetadata getDocumentMetadata() {

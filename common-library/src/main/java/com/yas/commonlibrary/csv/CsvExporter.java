@@ -16,12 +16,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
 
 
-@Slf4j
 public class CsvExporter {
+
+    private static final Logger LOGGER = Logger.getLogger(CsvExporter.class.getName());
 
     private CsvExporter() {
     }
@@ -93,10 +95,10 @@ public class CsvExporter {
 
             return value != null ? value.toString() : StringUtils.EMPTY;
         } catch (IllegalAccessException e) {
-            log.warn("Get value field err {}", e.getMessage());
+            LOGGER.log(Level.WARNING, "Get value field err {0}", e.getMessage());
             return StringUtils.EMPTY;
         } catch (InvocationTargetException | NoSuchMethodException e) {
-            log.warn("Get value err {}", e.getMessage());
+            LOGGER.log(Level.WARNING, "Get value err {0}", e.getMessage());
             return StringUtils.EMPTY;
         }
     }

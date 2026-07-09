@@ -1,0 +1,87 @@
+name: developer_build
+
+on:
+  workflow_dispatch:
+    inputs:
+      dev_service:
+        description: 'Service to deploy with custom branch'
+        required: true
+        type: choice
+        options:
+          - cart
+          - customer
+          - inventory
+          - location
+          - media
+          - order
+          - payment
+          - payment-paypal
+          - product
+          - promotion
+          - rating
+          - recommendation
+          - search
+          - tax
+          - webhook
+          - storefront-bff
+          - backoffice-bff
+      dev_branch:
+        description: 'Branch name (e.g., dev_tax_service)'
+        required: true
+        default: main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get commit SHA of dev_branch
+        id: sha
+        run: |
+          SHA=$(git rev-parse origin/${{ github.event.inputs.dev_branch }})
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Read domain config
+        id: config
+        run: |
+          echo "domain=$(yq -r '.domain' k8s/deploy/cluster-config.yaml)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy dev service with custom image tag + NodePort
+        run: |
+          helm upgrade --install ${{ github.event.inputs.dev_service }} \
+            k8s/charts/${{ github.event.inputs.dev_service }} \
+            --namespace yas --create-namespace \
+            --set backend.image.repository=${{ secrets.DOCKER_USERNAME }}/yas-${{ github.event.inputs.dev_service }} \
+            --set backend.image.tag=${{ steps.sha.outputs.sha }} \
+            --set backend.service.type=NodePort \
+            --set backend.ingress.enabled=false
+
+      - name: Get NodePort and node IP
+        id: svc-info
+        run: |
+          NODE_PORT=$(kubectl get svc -n yas ${{ github.event.inputs.dev_service }} \
+            -o jsonpath='{.spec.ports[0].nodePort}')
+          NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}')
+          echo "node_port=$NODE_PORT" >> "$GITHUB_OUTPUT"
+          echo "node_ip=$NODE_IP" >> "$GITHUB_OUTPUT"
+
+      - name: Output connection info
+        run: |
+          echo "## ✅ Developer Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | ${{ github.event.inputs.dev_service }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.event.inputs.dev_branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image tag | ${{ steps.sha.outputs.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Node IP | ${{ steps.svc-info.outputs.node_ip }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| NodePort | ${{ steps.svc-info.outputs.node_port }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Access URL | http://${{ steps.svc-info.outputs.node_ip }}:${{ steps.svc-info.outputs.node_port }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Thêm vào /etc/hosts:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.svc-info.outputs.node_ip }} ${{ github.event.inputs.dev_service }}.yas.local" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

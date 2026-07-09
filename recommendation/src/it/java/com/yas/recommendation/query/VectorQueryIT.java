@@ -24,15 +24,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
 @SpringBootTest
 @Import(KafkaIntegrationTestConfiguration.class)
-@TestPropertySource("classpath:application-test.properties")
-public class VectorQueryTest {
+@PropertySource("classpath:application.properties")
+public class VectorQueryIT {
 
     @Autowired
     private JdbcTemplate jdbcClient;

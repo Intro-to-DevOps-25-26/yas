@@ -1,0 +1,53 @@
+name: developer_cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      dev_service:
+        description: 'Service to reset to default (latest + ClusterIP)'
+        required: true
+        type: choice
+        options:
+          - cart
+          - customer
+          - inventory
+          - location
+          - media
+          - order
+          - payment
+          - payment-paypal
+          - product
+          - promotion
+          - rating
+          - recommendation
+          - search
+          - tax
+          - webhook
+          - storefront-bff
+          - backoffice-bff
+
+jobs:
+  cleanup:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reset service to default values from chart
+        run: |
+          helm upgrade --install ${{ github.event.inputs.dev_service }} \
+            k8s/charts/${{ github.event.inputs.dev_service }} \
+            --namespace yas --create-namespace
+
+      - name: Verify reset
+        run: |
+          echo "### ✅ Service reset complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          IMAGE=$(kubectl get deployment -n yas ${{ github.event.inputs.dev_service }} \
+            -o jsonpath='{.spec.template.spec.containers[0].image}')
+          SVC_TYPE=$(kubectl get svc -n yas ${{ github.event.inputs.dev_service }} \
+            -o jsonpath='{.spec.type}')
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | ${{ github.event.inputs.dev_service }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | $IMAGE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service type | $SVC_TYPE |" >> $GITHUB_STEP_SUMMARY

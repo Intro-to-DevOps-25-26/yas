@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset bangvan:issue-848
-CREATE TABLE media
+CREATE TABLE IF NOT EXISTS media
 (
     id         bigserial    NOT NULL,
     caption    varchar(255) NULL,
