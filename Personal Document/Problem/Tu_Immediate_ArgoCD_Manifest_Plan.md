@@ -16,9 +16,9 @@
   - Tao overlay chung `values-dev.yaml` va `values-staging.yaml`.
   - Test render `helm template` cho `sampledata`, `product`, `storefront-ui`, `backoffice-ui`.
   - Mo rong `swagger-ui` ingress de route duoc den 12 backend API docs path.
+  - Noi duoc ArgoCD app skeleton vao chart/values thong qua `ApplicationSet` cho `dev` va `staging`.
 - Dang lam:
-  - Chot image tag co dinh thay cho `latest` tren cac chart can test.
-  - Chot ro service nao expose bang `NodePort` va service nao giu `Ingress` o muc report.
+  - Chot image tag co dinh thay cho `latest` tren cac chart can test khi co tag release thuc.
 - Con lai:
   - Tach overlay theo tung chart neu can chi tiet hon cho `dev` va `staging`.
   - Chot manifest/reference cho ArgoCD render dung tag theo moi moi truong.
@@ -41,8 +41,8 @@
   - Tao `AppProject` skeleton.
   - Tao `Application` skeleton cho `dev` va `staging`.
   - Co template ArgoCD app de nhan values overlay.
+  - Co `ApplicationSet` skeleton cho `dev` va `staging` noi thang vao chart/values.
 - Con lai:
-  - Noi ArgoCD skeleton voi chart/values da on dinh.
   - Chot sync policy, prune, selfHeal, rollback flow theo tag co dinh.
   - Test sync thu cong sau khi tag duoc pin.
 
@@ -61,7 +61,7 @@
 1. Chot image tag co dinh cho chart can test.
 2. Kiem tra lai health check sau khi rollout.
 3. Hoan thien expose matrix `NodePort` / `Ingress` va xac nhan route swagger docs.
-4. Noi ArgoCD voi chart/values da on dinh.
+4. Test sync thu cong ArgoCD voi chart/values da noi.
 5. Ghi lai ket qua va screenshot.
 
 ## Deliverables
