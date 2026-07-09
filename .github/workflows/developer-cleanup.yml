@@ -28,24 +28,55 @@ on:
 
 jobs:
   cleanup:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Reset service to default values from chart
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          auth-key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Install yq
+        uses: mikefarah/yq@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Read domain config
+        id: config
+        run: |
+          echo "domain=$(yq -r '.domain' k8s/deploy/cluster-config.yaml)" >> "$GITHUB_OUTPUT"
+
+      - name: Rollback service to latest (ClusterIP + Ingress)
         run: |
           helm upgrade --install ${{ github.event.inputs.dev_service }} \
             k8s/charts/${{ github.event.inputs.dev_service }} \
-            --namespace yas --create-namespace
+            --namespace yas --create-namespace \
+            --set backend.image.repository=${{ secrets.DOCKER_USERNAME }}/yas-${{ github.event.inputs.dev_service }} \
+            --set backend.image.tag=latest \
+            --set backend.service.type=ClusterIP \
+            --set backend.ingress.enabled=true \
+            --set backend.ingress.host="api.${{ steps.config.outputs.domain }}"
 
       - name: Verify reset
         run: |
-          echo "### ✅ Service reset complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           IMAGE=$(kubectl get deployment -n yas ${{ github.event.inputs.dev_service }} \
             -o jsonpath='{.spec.template.spec.containers[0].image}')
           SVC_TYPE=$(kubectl get svc -n yas ${{ github.event.inputs.dev_service }} \
             -o jsonpath='{.spec.type}')
+          echo "## ✅ Developer Cleanup Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Service | ${{ github.event.inputs.dev_service }} |" >> $GITHUB_STEP_SUMMARY

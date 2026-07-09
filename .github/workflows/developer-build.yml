@@ -32,17 +32,42 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get commit SHA of dev_branch
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          auth-key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Install yq
+        uses: mikefarah/yq@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Validate branch exists
         id: sha
         run: |
-          SHA=$(git rev-parse origin/${{ github.event.inputs.dev_branch }})
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code origin ${{ github.event.inputs.dev_branch }} > /dev/null 2>&1; then
+            git fetch origin ${{ github.event.inputs.dev_branch }}
+            SHA=$(git rev-parse FETCH_HEAD)
+            echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "ERROR: Branch '${{ github.event.inputs.dev_branch }}' does not exist on remote origin."
+            exit 1
+          fi
 
       - name: Read domain config
         id: config
@@ -70,7 +95,7 @@ jobs:
 
       - name: Output connection info
         run: |
-          echo "## ✅ Developer Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "## \u2705 Developer Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
