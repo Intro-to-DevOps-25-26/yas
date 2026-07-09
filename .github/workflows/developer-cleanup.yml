@@ -68,7 +68,7 @@ jobs:
           helm upgrade --install ${{ github.event.inputs.dev_service }} \
             k8s/charts/${{ github.event.inputs.dev_service }} \
             --namespace yas --create-namespace \
-            --force \
+            --no-server-side-apply --force-replace \
             --set backend.image.repository=${{ secrets.DOCKER_USERNAME }}/yas-${{ github.event.inputs.dev_service }} \
             --set backend.image.tag=latest \
             --set backend.service.type=ClusterIP \
