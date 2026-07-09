@@ -11,9 +11,12 @@ spec:
     path: k8s/charts/order
     helm:
       releaseName: order
-      valueFiles:
-        - values.yaml
-        - ../values-dev.yaml
+      values: |
+        backend:
+          image:
+            tag: "latest"
+          serviceMonitor:
+            enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: yas-dev

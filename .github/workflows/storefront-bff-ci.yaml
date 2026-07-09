@@ -81,10 +81,19 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate Docker tags
+        id: docker-tags
+        if: ${{ github.ref == 'refs/heads/main' }}
+        shell: bash
+        run: |
+          BASE="ghcr.io/nashtech-garage/yas-storefront-bff"
+          TAGS="$BASE:${{ github.sha }}"
+          TAGS="$TAGS,$BASE:latest"
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
       - name: Build and push Docker images
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
         with:
           context: ./storefront-bff
           push: true
-          tags: ghcr.io/nashtech-garage/yas-storefront-bff:latest
+          tags: ${{ steps.docker-tags.outputs.tags }}

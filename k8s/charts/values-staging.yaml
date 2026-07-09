@@ -3,16 +3,14 @@
 
 backend:
   image:
-    tag: "staging-fixed"
+    tag: "0c605cb4"
   serviceMonitor:
     enabled: false
-
 ui:
   image:
-    tag: "staging-fixed"
+    tag: "0c605cb4"
   service:
     type: NodePort
-
 sampledata:
   image:
     tag: "16.3-alpine"

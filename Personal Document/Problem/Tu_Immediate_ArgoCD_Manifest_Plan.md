@@ -18,12 +18,21 @@
   - `helm lint` pass cho toan bo chart core.
   - Mo rong `swagger-ui` ingress de route duoc den 12 backend API docs path.
   - Noi duoc ArgoCD app skeleton vao chart/values thong qua `ApplicationSet` cho `dev` va `staging`.
+  - Pin tam thoi overlay dev/staging sang SHA `0c605cb4` de test GitOps flow local.
+  - Verify lai `helm template` cho `product` va `storefront-ui` voi tag SHA moi.
+  - Cai dat ArgoCD controller/CRD len cluster.
+  - Port-forward `argocd-server` va lay initial admin password.
+  - Apply `AppProject` va `Application` len cluster.
+  - Sync thu cong `product-dev` thanh cong.
+  - Chuyen cac app con lai sang inline values hoac values.yaml trong chart path.
+  - Apply lai bo Application `dev/staging` len cluster.
+  - Xoa het reference overlay ngoai chart path trong `argocd/apps`.
 - Dang lam:
-  - Pin image tag co dinh cho cac chart can test.
+  - Pin image tag co dinh cho cac chart can test bang SHA that tu CI/CD.
 - Con lai:
-  - Tach overlay theo tung chart neu can chi tiet hon cho `dev` va `staging`.
-  - Doi chieu lai namespace, selector, port, probe, config map va secret cho tat ca chart con lai.
-  - Test `helm upgrade --install` voi tag co dinh va ghi lai ket qua render.
+  - Doi immutable SHA tag tu CI/CD thay cho `latest`.
+  - Test rollback sau khi co tag that.
+  - Chup screenshot ArgoCD UI / diff / rollback.
 
 ### 2. Health Check
 
@@ -33,11 +42,11 @@
   - Xac nhan `swagger-ui` dung probe `/swagger-ui`.
   - Xac nhan `product` da ve `1/1 Running`.
   - Xac nhan `sampledata` Job da seeding xong.
+  - `product-dev` da sync qua ArgoCD va chay lai sau khi chuyen sang values inline.
 - Con lai:
-  - Kiem tra lai probe cho tung service khi rollout thuc te.
-  - Dam bao khong con probe rewrite/kieu Istio cu con sot trong deployment spec.
+  - Kiem tra lai probe cho tung service khi rollout voi tag immutable that.
   - Chot log startup/readiness sau khi pin tag co dinh.
-  - Xac nhan service nao con 0/1, service nao da Ready 1/1.
+  - Cho ArgoCD reconcile day du cac Application moi tao de confirm status UI.
 
 ### 3. ArgoCD Skeleton
 
@@ -47,22 +56,55 @@
   - Co template ArgoCD app de nhan values overlay.
   - Co `ApplicationSet` skeleton cho `dev` va `staging` noi thang vao chart/values.
   - `kubectl kustomize` pass cho `argocd/apps/dev` va `argocd/apps/staging`.
+  - `argocd-server` da ready va co the truy cap qua port-forward.
 - Con lai:
   - Chot sync policy, prune, selfHeal, rollback flow theo tag co dinh.
-  - Test sync thu cong sau khi tag duoc pin.
+  - Test sync thu cong cac app con lai sau khi tag duoc pin.
   - Kiem tra ArgoCD app/project status, diff, va rollback bang revision.
   - Xac nhan CRD ArgoCD da co tren cluster truoc khi apply that.
+  - Neu cluster chua co CRD/controller thi day la blocker phia he thong, khong phai do chart.
 
 ### 4. Screenshot / Report
 
 - Da xong:
   - Co audit doc rieng cho chart/manifest.
   - Co skeleton ArgoCD va ghi chu trong report.
+  - Da co log qua trinh cai dat va sync app dau tien.
 - Con lai:
   - Chup screenshot render chart/values sau khi pin tag xong.
   - Chup screenshot ArgoCD app/project khi sync on dinh.
   - Tong hop ket qua `sampledata Job`, expose matrix, va health check vao report.
   - Viet report ngan theo luong: chart -> health -> GitOps -> sync -> rollback.
+
+## Trang thai hien tai
+
+- Lam duoc truoc CI/CD:
+  - audit chart/manifest
+  - tao overlay dev/staging
+  - validate local render
+  - tao ArgoCD skeleton
+  - gom YAML ArgoCD thanh commit rieng
+  - chot report / checklist noi bo
+- Phai doi CI/CD:
+  - immutable image tag that
+  - rollout final voi tag that
+  - sync/rollback ArgoCD that
+- Phai doi cluster:
+  - apply AppProject/Application that
+- Co helper script de sync tag vao values dev/staging:
+  - `k8s/deploy/sync-gitops-image-tag.sh`
+
+## Checklist can lam de hoan thanh
+
+1. Xac nhan image SHA that da build va push len registry.
+2. Cap nhat values dev/staging bang image SHA that.
+3. Giữ chart/manifest va probe da audit o trang thai on dinh.
+4. Apply AppProject / Application / ApplicationSet that.
+5. Sync thu cong cac app con lai.
+6. Kiem tra Healthy / Synced / diff.
+7. Test rollback.
+8. Chup screenshot.
+9. Cap nhat report final.
 
 ## Thu tu lam
 

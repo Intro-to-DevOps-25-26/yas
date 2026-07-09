@@ -11,9 +11,12 @@ spec:
     path: k8s/charts/storefront-ui
     helm:
       releaseName: storefront-ui
-      valueFiles:
-        - values.yaml
-        - ../values-staging.yaml
+      values: |
+        ui:
+          image:
+            tag: "latest"
+          service:
+            type: NodePort
   destination:
     server: https://kubernetes.default.svc
     namespace: yas-staging

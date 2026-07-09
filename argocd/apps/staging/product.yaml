@@ -11,9 +11,12 @@ spec:
     path: k8s/charts/product
     helm:
       releaseName: product
-      valueFiles:
-        - values.yaml
-        - ../values-staging.yaml
+      values: |
+        backend:
+          image:
+            tag: "latest"
+          serviceMonitor:
+            enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: yas-staging

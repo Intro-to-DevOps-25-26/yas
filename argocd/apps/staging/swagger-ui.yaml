@@ -13,7 +13,6 @@ spec:
       releaseName: swagger-ui
       valueFiles:
         - values.yaml
-        - ../values-staging.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: yas-staging

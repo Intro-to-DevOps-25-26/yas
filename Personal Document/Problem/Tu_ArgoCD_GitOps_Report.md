@@ -77,53 +77,76 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - Overlay `values-dev.yaml` va `values-staging.yaml` da co san de pin tag khi can test nhanh.
 - `helm lint` pass cho toan bo chart core.
 - `helm upgrade --install` da test fallback voi `latest` tren namespace `yas-dev`.
+- Cac workflow service rieng da duoc chuan hoa sang SHA tag khi build/push, de tranh phu thuoc vao `latest`.
+- Da co helper `k8s/deploy/sync-gitops-image-tag.sh` de cap nhat overlay dev/staging theo SHA tag.
+- `values-dev.yaml` va `values-staging.yaml` da duoc pin tam thoi sang `0c605cb4` de test GitOps flow local.
+- `helm template` da pass lai cho `product` va `storefront-ui` voi overlay SHA moi.
 - `yas-configuration` da duoc install vao `yas-dev` de cap configmap/secret cho cac service core.
 - `serviceMonitor.enabled` da duoc tat trong overlay dev/staging vi cluster hien tai chua co CRD `ServiceMonitor`.
 - Tag immutable hien tai chua co trong registry; `dev-fixed` / `staging-fixed` dang blocked cho den khi CI/CD publish tag co dinh.
 - `kubectl kustomize` pass cho:
   - `argocd/apps/dev`
   - `argocd/apps/staging`
-- Cluster hien tai chua co CRD ArgoCD (`AppProject`, `Application`), nen apply dry-run cac resource nay se bao chua co kind tuong ung.
+- Cluster hien tai da co CRD ArgoCD (`AppProject`, `Application`), nen co the apply `AppProject` / `Application` that.
+- Da port-forward thanh cong `argocd-server` de test UI local.
+- Da lay initial admin password tu `argocd-initial-admin-secret`.
+- Da apply `AppProject` / `Application` len cluster va sync thu cong `product-dev` thanh cong.
+- `product-dev` da re-render dung khi bo overlay file ngoai chart path va chuyen sang values inline.
+- `product` da chay lai 1/1 Running sau khi tạm pin image `latest` vi SHA `0c605cb4` chua co tren registry.
+- Da chuyen toan bo Application `dev/staging` sang inline values hoac values.yaml trong chart path de tranh overlay ngoai path.
+- Da apply lai bo Application `dev/staging` len cluster sau khi chuyen inline values.
+- Da clear het reference overlay ngoai chart path trong `argocd/apps`.
 - `product` da quay ve `1/1 Running`.
 - `sampledata` Job da seeding xong va `Complete 1/1`.
+- ArgoCD namespace `argocd` da install xong; controller, server, repo-server, redis, dex, notifications, applicationset deu da Ready.
+- `argocd-initial-admin-secret` da duoc tao trong namespace `argocd`.
 
 ## Viec con lai cua Tú
 
-### 1. Chart / Manifest
+### 1. Viec co the lam ngay da xong
 
-- Pin image tag co dinh cho chart can test.
-- Doi chieu lai namespace, selector, port, probe, config map va secret.
-- Test `helm upgrade --install` voi tag co dinh va luu ket qua.
-- Chot manifest/chart de ArgoCD lay lam nguon chan ly.
+- Chart / manifest da audit co ban.
+- `sampledata` da chuyen sang `Job` seed 1 lan.
+- `values-dev.yaml` va `values-staging.yaml` da co overlay.
+- `helm template` va `helm lint` da pass cho toan bo chart core.
+- `kubectl kustomize` da pass cho `argocd/apps/dev` va `argocd/apps/staging`.
+- `product` da ve `1/1 Running`.
+- `sampledata` Job da seeding xong va `Complete 1/1`.
 
-### 2. Health Check
+### 2. Viec con lai chua lam xong
 
-- Kiem tra service nao con `0/1` va service nao da `1/1`.
-- Xac nhan `readinessProbe`, `livenessProbe`, `startupProbe` khong con di theo co che Istio cu.
-- Luu log startup/readiness sau khi rollout.
+- Cho CI/CD cua Luân publish immutable tag that thi moi pin duoc tag that cho `dev` / `staging`.
+- Sau khi co tag that:
+  - sync thu cong cac app con lai
+  - kiem tra `Healthy` / `Synced`
+  - test rollback theo revision
+  - chup screenshot va dong goi bao cao cuoi
+- Hien tai chi con cho ArgoCD reconcile day du cac Application moi tao de confirm status UI neu co app nao chua hien het status.
 
-### 3. ArgoCD
+## Task con lai cho ArgoCD
 
-- Chot `syncPolicy`, `prune`, `selfHeal`, rollback flow.
-- Test sync thu cong voi image tag co dinh.
-- Kiem tra `Healthy` / `Synced` / diff.
-- Test rollback bang revision ArgoCD.
-- Kiem tra cluster co CRD ArgoCD truoc khi apply `AppProject` / `Application` that.
+- Thay `latest` bang immutable SHA tag khi CI/CD publish xong.
+- Sync lai cac app con lai neu image registry da co tag that.
+- Test rollback cho app da sync on dinh.
+- Chup screenshot:
+  - AppProject / Application YAML
+  - ArgoCD UI `Synced` / `Healthy`
+  - Diff / sync / rollback neu co
+- Cap nhat report final theo ket qua that tren cluster.
 
-### 4. Report / Screenshot
+### 3. Viec con lai chi phu thuoc CI/CD / cluster
 
-- Chup screenshot chart render.
-- Chup screenshot ArgoCD app/project.
-- Tong hop bang chung `sampledata Job`, health check, expose matrix.
-- Viet report cuoi theo luong: chart -> health -> GitOps -> sync -> rollback.
+- Immutable image tag thay cho `latest`.
+- Sync/rollback that trong ArgoCD thay vi chi render local.
+- Capture screenshot thuc te cua app/project trong ArgoCD.
 
 ## Trinh tu thuc hien thuc te
 
 1. Chot chart/manifest va values.
-2. Pin image tag co dinh.
-3. Render test bang Helm.
-4. Tao ArgoCD app/project.
-5. Sync thu cong.
+2. Cho CI/CD co immutable tag that.
+3. Cap nhat values dev/staging bang tag SHA that.
+4. Apply ArgoCD app-project that.
+5. Sync thu cong cac app con lai.
 6. Test rollback.
 7. Chup screenshot.
 8. Cap nhat report va checklist.
@@ -173,19 +196,22 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 ## Dieu kien de ArgoCD chay on
 
 - Chart/manifest da on dinh.
-- Image tag da duoc pin ro rang.
+- Image tag da duoc pin ro rang bang SHA that / digest that.
 - Probe va service port da dung.
 - Cluster khong con loi nen nhu DNS, node, webhook, hay rollout bi chan.
 - Da co quy uoc ro ve `dev` va `staging`.
+- ArgoCD controller va CRD da duoc cai dat tren cluster.
+- ArgoCD server va repo/controller da Ready trong namespace `argocd`.
 
 ## Thu tu uu tien
 
-1. Pin image tag co dinh.
+1. Cho CI/CD publish immutable tag that.
 2. Kiem tra lai health check.
-3. Test expose matrix.
-4. Sync ArgoCD thu cong.
-5. Test rollback.
-6. Chup screenshot va dong goi report.
+3. Cap nhat values dev/staging bang tag SHA that.
+4. Apply ArgoCD AppProject/Application that.
+5. Sync ArgoCD thu cong.
+6. Test rollback.
+7. Chup screenshot va dong goi report.
 
 ## File lien quan
 

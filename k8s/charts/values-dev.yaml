@@ -3,16 +3,14 @@
 
 backend:
   image:
-    tag: "dev-fixed"
+    tag: "0c605cb4"
   serviceMonitor:
     enabled: false
-
 ui:
   image:
-    tag: "dev-fixed"
+    tag: "0c605cb4"
   service:
     type: NodePort
-
 sampledata:
   image:
     tag: "16.3-alpine"

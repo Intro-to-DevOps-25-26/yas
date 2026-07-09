@@ -10,63 +10,48 @@ spec:
           - name: yas-configuration
             path: k8s/charts/yas-configuration
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: product
             path: k8s/charts/product
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: cart
             path: k8s/charts/cart
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: order
             path: k8s/charts/order
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: customer
             path: k8s/charts/customer
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: inventory
             path: k8s/charts/inventory
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: tax
             path: k8s/charts/tax
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: media
             path: k8s/charts/media
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: search
             path: k8s/charts/search
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: storefront-bff
             path: k8s/charts/storefront-bff
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: storefront-ui
             path: k8s/charts/storefront-ui
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: backoffice-bff
             path: k8s/charts/backoffice-bff
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: backoffice-ui
             path: k8s/charts/backoffice-ui
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: swagger-ui
             path: k8s/charts/swagger-ui
             namespace: yas-dev
-            envValues: ../values-dev.yaml
           - name: sampledata
             path: k8s/charts/sampledata
             namespace: yas-dev
-            envValues: ../values-dev.yaml
   template:
     metadata:
       name: '{{name}}-dev'
@@ -80,7 +65,6 @@ spec:
           releaseName: '{{name}}'
           valueFiles:
             - values.yaml
-            - '{{envValues}}'
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{namespace}}'

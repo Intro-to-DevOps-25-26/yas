@@ -11,9 +11,12 @@ spec:
     path: k8s/charts/sampledata
     helm:
       releaseName: sampledata
-      valueFiles:
-        - values.yaml
-        - ../values-staging.yaml
+      values: |
+        sampledata:
+          image:
+            tag: "16.3-alpine"
+          serviceMonitor:
+            enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: yas-staging
