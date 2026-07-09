@@ -1,29 +1,130 @@
 # Tu ArgoCD One-Page Checklist
 
+## Da lam
+
+- Da verify `helm template` va `helm lint` cho toan bo chart core.
+- Da co `values-dev.yaml` va `values-staging.yaml`.
+- Da co `AppProject` skeleton.
+- Da co `Application` / `ApplicationSet` skeleton.
+- Da bo sung day du `Application` cho `dev/staging`.
+- Da install `yas-configuration` vao namespace test de tao configmap/secret phu thuoc.
+- Da disable `serviceMonitor` o overlay dev/staging vi cluster hien tai chua co CRD.
+- Da test `helm upgrade --install` fallback voi `latest` cho `storefront-ui`, `sampledata`, va `product` de kiem tra duong apply.
+- Da verify `kubectl kustomize` pass cho `argocd/apps/dev` va `argocd/apps/staging`.
+- Da verify `sampledata` Job seeding thanh cong va `product` da ve `1/1 Running`.
+
 ## Lam ngay
 
-- Chot `Deployment`, `Service`, `Job` cho 14 core service.
-- Tach `values-dev.yaml` va `values-staging.yaml`.
-- Kiem tra `namespace`, `selector`, `port`, `probe`, `configMap`, `secret`.
-- Chot `AppProject` skeleton.
-- Chot `Application` / `ApplicationSet` skeleton.
-- Chot `syncPolicy`, `prune`, `selfHeal`.
+### 1. Chot chart / manifest
+
+- Kiem tra tung chart core con lai co dung mo hinh:
+  - `Deployment`
+  - `Service`
+  - `Job`
+- Doi chieu lai:
+  - `namespace`
+  - `selector`
+  - `port`
+  - `probe`
+  - `configMap`
+  - `secret`
+- Dam bao `sampledata` chi con la `Job` seed 1 lan.
+- Dam bao `yas-configuration` da co san va khong bi thieu config phu thuoc.
+
+### 2. Tach overlay
+
+- Duy tri `values-dev.yaml` va `values-staging.yaml`.
+- Pin tag test tam thoi trong overlay de khong dung hard-code lan lon trong chart goc.
+- Ghi ro cai nao chi dung cho dev, cai nao giu cho staging.
+
+### 3. Chot ArgoCD skeleton
+
+- Hoan thien `AppProject` cho:
+  - `yas-dev`
+  - `yas-staging`
+- Hoan thien `Application` / `ApplicationSet` cho day du service.
+- Chot `syncPolicy`:
+  - `CreateNamespace=true`
+  - `automated.prune=false`
+  - `automated.selfHeal=false`
+- Kiem tra cluster co CRD ArgoCD truoc khi apply `AppProject` / `Application` that.
+
+### 4. Kiem tra dau ra can co
+
+- Moi app phai co manifest ro rang trong `argocd/apps/dev` va `argocd/apps/staging`.
+- Moi app phai map dung chart path va values overlay.
+- Phan deliverable phai co the chup man hinh duoc.
 
 ## Lam khi co tag co dinh
 
-- Pin image tag cho cac chart can test.
-- Chay `helm template`.
-- Chay `helm upgrade --install` thu cong.
-- Kiem tra pod `Running` / `Ready`.
-- Kiem tra `Healthy` / `Synced` trong ArgoCD.
-- Kiem tra `diff` giua Git va cluster.
+### 1. Pin image tag
+
+- Dung tag co dinh cho cac chart can test.
+- Tren repo hien tai, neu tag co dinh chua co trong registry thi ghi ro blocker.
+- Khong dung `latest` lam chot cuoi neu can report final.
+
+### 2. Render va install thu cong
+
+- Chay `helm template` cho tung chart can xac minh.
+- Chay `helm upgrade --install` thu cong theo namespace test.
+- Kiem tra output:
+  - `kubectl get pods`
+  - `kubectl get svc`
+  - `kubectl describe pod`
+
+### 3. Xac minh trang thai
+
+- Pod phai sang `Running` va `Ready`.
+- ArgoCD phai bao:
+  - `Synced`
+  - `Healthy`
+- Doi chieu diff giua Git va cluster.
+- Xac nhan `sampledata` Job `Complete 1/1` khi seed xong.
+
+### 4. Danh dau blocker
+
+- Neu registry chua co immutable tag:
+  - ghi vao report
+  - dung `latest` chi de test duong di
+  - khong chot la trang thai final
 
 ## Cho ArgoCD sync
 
-- Sync thu cong mot app truoc.
-- Test rollback bang revision.
-- Chup screenshot chart render.
-- Chup screenshot ArgoCD app/project.
-- Chup screenshot sync / rollback.
-- Tong hop report theo luong: chart -> health -> GitOps -> sync -> rollback.
+### 1. Sync thu cong
 
+- Sync tung app mot, uu tien app don gian truoc.
+- Kiem tra `project`, `namespace`, `source path`, `valueFiles`.
+
+### 2. Kiem tra state
+
+- Xac minh:
+  - `Synced`
+  - `Healthy`
+  - `OutOfSync` neu co sai
+- Ghi lai revision, image tag, va namespace dang sync.
+
+### 3. Test rollback
+
+- Doi manifest hoac image tag de tao revision moi.
+- Rollback bang revision ArgoCD.
+- Kiem tra app quay ve state cu on dinh.
+
+### 4. Chup bang chung
+
+- Chup screenshot chart render.
+- Chup screenshot app/project trong ArgoCD.
+- Chup screenshot sync / rollback.
+
+### 5. Report
+
+- Tong hop report theo luong:
+  - chart
+  - health
+  - GitOps
+  - sync
+  - rollback
+- Neu co blocker thi ghi ro:
+  - do cluster
+  - do registry
+  - do config
+  - do app runtime

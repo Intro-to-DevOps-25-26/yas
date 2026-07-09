@@ -71,6 +71,22 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - Mo rong `swagger-ui` ingress de route duoc den backend API docs.
 - Tao skeleton ArgoCD cho `AppProject`, `Application`, `ApplicationSet`.
 
+## Da xac minh them
+
+- `helm template` pass cho toan bo chart core.
+- Overlay `values-dev.yaml` va `values-staging.yaml` da co san de pin tag khi can test nhanh.
+- `helm lint` pass cho toan bo chart core.
+- `helm upgrade --install` da test fallback voi `latest` tren namespace `yas-dev`.
+- `yas-configuration` da duoc install vao `yas-dev` de cap configmap/secret cho cac service core.
+- `serviceMonitor.enabled` da duoc tat trong overlay dev/staging vi cluster hien tai chua co CRD `ServiceMonitor`.
+- Tag immutable hien tai chua co trong registry; `dev-fixed` / `staging-fixed` dang blocked cho den khi CI/CD publish tag co dinh.
+- `kubectl kustomize` pass cho:
+  - `argocd/apps/dev`
+  - `argocd/apps/staging`
+- Cluster hien tai chua co CRD ArgoCD (`AppProject`, `Application`), nen apply dry-run cac resource nay se bao chua co kind tuong ung.
+- `product` da quay ve `1/1 Running`.
+- `sampledata` Job da seeding xong va `Complete 1/1`.
+
 ## Viec con lai cua Tú
 
 ### 1. Chart / Manifest
@@ -92,6 +108,7 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - Test sync thu cong voi image tag co dinh.
 - Kiem tra `Healthy` / `Synced` / diff.
 - Test rollback bang revision ArgoCD.
+- Kiem tra cluster co CRD ArgoCD truoc khi apply `AppProject` / `Application` that.
 
 ### 4. Report / Screenshot
 

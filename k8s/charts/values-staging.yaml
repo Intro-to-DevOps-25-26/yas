@@ -4,6 +4,8 @@
 backend:
   image:
     tag: "staging-fixed"
+  serviceMonitor:
+    enabled: false
 
 ui:
   image:
@@ -14,3 +16,5 @@ ui:
 sampledata:
   image:
     tag: "16.3-alpine"
+  serviceMonitor:
+    enabled: false
