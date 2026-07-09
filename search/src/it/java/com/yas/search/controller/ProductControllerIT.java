@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
 import com.yas.commonlibrary.AbstractControllerIT;
+import com.yas.search.config.KafkaContainerInitializer;
 import com.yas.search.config.SearchIntegrationTestConfiguration;
 import com.yas.search.model.Product;
 import com.yas.search.repository.ProductRepository;
@@ -17,12 +18,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.data.elasticsearch.core.RefreshPolicy;
 import org.springframework.http.HttpStatus;
 
 @Import(SearchIntegrationTestConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @PropertySource("classpath:application.properties")
+@ContextConfiguration(initializers = KafkaContainerInitializer.class)
 public class ProductControllerIT extends AbstractControllerIT {
 
     @Autowired

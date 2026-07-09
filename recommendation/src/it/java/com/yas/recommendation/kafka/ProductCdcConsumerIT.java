@@ -18,6 +18,7 @@ import com.yas.commonlibrary.kafka.cdc.message.ProductCdcMessage;
 import com.yas.commonlibrary.kafka.cdc.message.ProductMsgKey;
 import com.yas.recommendation.configuration.EmbeddingSearchConfiguration;
 import com.yas.recommendation.configuration.KafkaConfiguration;
+import com.yas.recommendation.configuration.TestContainersInitializer;
 import com.yas.recommendation.configuration.RecommendationConfig;
 import com.yas.recommendation.vector.product.query.RelatedProductQuery;
 import com.yas.recommendation.vector.product.service.ProductVectorSyncService;
@@ -44,6 +45,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -53,6 +55,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Import(KafkaConfiguration.class)
 @PropertySource("classpath:application.properties")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ContextConfiguration(initializers = TestContainersInitializer.class)
 public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, ProductCdcMessage> {
     public static final String STOREFRONT_PRODUCTS_PATH = "/storefront/products/detail/{id}";
     private static final String PRODUCT_NAME_UPDATE = "IPhone 14 Pro New";

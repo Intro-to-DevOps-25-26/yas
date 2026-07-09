@@ -12,6 +12,7 @@ import tools.jackson.databind.ObjectMapper;
 import com.yas.commonlibrary.kafka.cdc.message.Product;
 import com.yas.commonlibrary.kafka.cdc.message.ProductCdcMessage;
 import com.yas.commonlibrary.kafka.cdc.message.ProductMsgKey;
+import com.yas.search.config.KafkaContainerInitializer;
 import com.yas.search.config.SearchIntegrationTestConfiguration;
 import com.yas.search.config.ServiceUrlConfig;
 import com.yas.search.repository.ProductRepository;
@@ -32,11 +33,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Import(SearchIntegrationTestConfiguration.class)
 @PropertySource("classpath:application.properties")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ContextConfiguration(initializers = KafkaContainerInitializer.class)
 public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, ProductCdcMessage> {
 
     public static final String STOREFRONT_PRODUCTS_ES_PATH = "/storefront/products-es/{id}";
