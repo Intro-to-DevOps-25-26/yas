@@ -37,7 +37,9 @@ jobs:
       - name: Connect to Tailscale
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
@@ -58,6 +60,13 @@ jobs:
         run: |
           echo "domain=$(yq -r '.domain' k8s/deploy/cluster-config.yaml)" >> "$GITHUB_OUTPUT"
 
+      - name: Build Helm dependencies
+        run: helm dependency build k8s/charts/${{ github.event.inputs.dev_service }}
+
+      - name: Delete existing deployment to avoid SSA conflicts
+        run: |
+          kubectl delete deployment ${{ github.event.inputs.dev_service }} -n yas --ignore-not-found --wait=true
+
       - name: Rollback service to latest (ClusterIP + Ingress)
         run: |
           helm upgrade --install ${{ github.event.inputs.dev_service }} \
@@ -67,7 +76,8 @@ jobs:
             --set backend.image.tag=latest \
             --set backend.service.type=ClusterIP \
             --set backend.ingress.enabled=true \
-            --set backend.ingress.host="api.${{ steps.config.outputs.domain }}"
+            --set backend.ingress.host="api.${{ steps.config.outputs.domain }}" \
+            --set backend.serviceMonitor.enabled=false
 
       - name: Verify reset
         run: |
