@@ -30,31 +30,40 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
 
       - name: Configure kubeconfig
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          echo "$KUBECONFIG" | base64 -d > $HOME/.kube/config
 
       - name: Install yq
-        uses: mikefarah/yq@v4
+        uses: mikefarah/yq@1b9b4ac5187171d2e5e3129be0cfa827c7f9d53d # v4
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.3.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Validate branch exists
         id: sha
@@ -80,11 +89,43 @@ jobs:
         run: |
           kubectl delete deployment ${{ github.event.inputs.dev_service }} -n yas --ignore-not-found --wait=true
 
+      - name: Ensure Docker image exists
+        run: |
+          SERVICE=${{ github.event.inputs.dev_service }}
+          TAG=${{ steps.sha.outputs.sha }}
+          IMAGE="$DOCKER_USERNAME/yas-$SERVICE:$TAG"
+
+          # Remove local copy if any
+          docker image rm -f "$IMAGE" 2>/dev/null || true
+
+          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "Image $IMAGE already exists on Docker Hub"
+          else
+            case "$SERVICE" in
+              storefront-ui|backoffice-ui|swagger-ui)
+                echo "Image not found. Pulling from external registry..."
+                case "$SERVICE" in
+                  storefront-ui) SRC_IMAGE="ghcr.io/nashtech-garage/yas-storefront:latest"  ;;
+                  backoffice-ui) SRC_IMAGE="ghcr.io/nashtech-garage/yas-backoffice:latest"  ;;
+                  swagger-ui)    SRC_IMAGE="swaggerapi/swagger-ui:v5.11.0"                   ;;
+                esac
+                docker pull "$SRC_IMAGE"
+                docker tag "$SRC_IMAGE" "$IMAGE"
+                docker push "$IMAGE"
+                ;;
+              *)
+                echo "ERROR: Image $IMAGE does not exist on Docker Hub."
+                echo "Run CI pipeline first, or build manually."
+                exit 1
+                ;;
+            esac
+          fi
+
       - name: Deploy dev service with custom image tag + NodePort
         run: |
           SERVICE=${{ github.event.inputs.dev_service }}
           TAG=${{ steps.sha.outputs.sha }}
-          REPO=${{ secrets.DOCKER_USERNAME }}/yas-$SERVICE
+          REPO=$DOCKER_USERNAME/yas-$SERVICE
 
           # Determine chart type prefix
           case "$SERVICE" in
