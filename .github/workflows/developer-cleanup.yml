@@ -60,6 +60,9 @@ jobs:
         run: |
           echo "domain=$(yq -r '.domain' k8s/deploy/cluster-config.yaml)" >> "$GITHUB_OUTPUT"
 
+      - name: Build Helm dependencies
+        run: helm dependency build k8s/charts/${{ github.event.inputs.dev_service }}
+
       - name: Rollback service to latest (ClusterIP + Ingress)
         run: |
           helm upgrade --install ${{ github.event.inputs.dev_service }} \
