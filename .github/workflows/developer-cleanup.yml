@@ -11,41 +11,105 @@ on:
           - cart
           - customer
           - inventory
-          - location
           - media
           - order
-          - payment
-          - payment-paypal
           - product
-          - promotion
-          - rating
-          - recommendation
           - search
           - tax
-          - webhook
           - storefront-bff
           - backoffice-bff
+          - storefront-ui
+          - backoffice-ui
+          - swagger-ui
+          - sampledata
 
 jobs:
   cleanup:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    env:
+      KUBECONFIG_B64: ${{ secrets.KUBECONFIG }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
 
-      - name: Reset service to default values from chart
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+
+      - name: Configure kubeconfig
         run: |
-          helm upgrade --install ${{ github.event.inputs.dev_service }} \
-            k8s/charts/${{ github.event.inputs.dev_service }} \
-            --namespace yas --create-namespace
+          mkdir -p $HOME/.kube
+          echo "$KUBECONFIG_B64" | base64 -d > $HOME/.kube/config
+
+      - name: Install yq
+        uses: mikefarah/yq@1b9b4ac5187171d2e5e3129be0cfa827c7f9d53d # v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+
+      - name: Read domain config
+        id: config
+        run: |
+          echo "domain=$(yq -r '.domain' k8s/deploy/cluster-config.yaml)" >> "$GITHUB_OUTPUT"
+
+      - name: Build Helm dependencies
+        run: helm dependency build k8s/charts/${{ github.event.inputs.dev_service }}
+
+      - name: Delete existing deployment to avoid SSA conflicts
+        run: |
+          kubectl delete deployment ${{ github.event.inputs.dev_service }} -n yas --ignore-not-found --wait=true
+
+      - name: Rollback service to latest (ClusterIP + Ingress)
+        run: |
+          SERVICE=${{ github.event.inputs.dev_service }}
+          DOMAIN=${{ steps.config.outputs.domain }}
+          REPO=$DOCKER_USERNAME/yas-$SERVICE
+
+          # Determine chart type prefix
+          case "$SERVICE" in
+            storefront-ui|backoffice-ui) PREFIX="ui" ;;
+            swagger-ui) PREFIX="" ;;
+            *) PREFIX="backend" ;;
+          esac
+
+          # Determine ingress host based on service type
+          case "$SERVICE" in
+            storefront-ui|storefront-bff) INGRESS_HOST="storefront.$DOMAIN" ;;
+            backoffice-ui|backoffice-bff) INGRESS_HOST="backoffice.$DOMAIN" ;;
+            *) INGRESS_HOST="api.$DOMAIN" ;;
+          esac
+
+          # Build dynamic --set flags
+          SETS="--set ${PREFIX:+"$PREFIX."}image.repository=$REPO"
+          SETS="$SETS --set ${PREFIX:+"$PREFIX."}image.tag=latest"
+          SETS="$SETS --set ${PREFIX:+"$PREFIX."}serviceMonitor.enabled=false"
+
+          # Service type & ingress (Jobs like sampledata don't need service)
+          if [ "$SERVICE" != "sampledata" ]; then
+            SETS="$SETS --set ${PREFIX:+"$PREFIX."}service.type=ClusterIP"
+            SETS="$SETS --set ${PREFIX:+"$PREFIX."}ingress.enabled=true"
+            SETS="$SETS --set ${PREFIX:+"$PREFIX."}ingress.host=$INGRESS_HOST"
+          fi
+
+          helm upgrade --install "$SERVICE" "k8s/charts/$SERVICE" \
+            --namespace yas --create-namespace $SETS
 
       - name: Verify reset
         run: |
-          echo "### ✅ Service reset complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           IMAGE=$(kubectl get deployment -n yas ${{ github.event.inputs.dev_service }} \
             -o jsonpath='{.spec.template.spec.containers[0].image}')
           SVC_TYPE=$(kubectl get svc -n yas ${{ github.event.inputs.dev_service }} \
             -o jsonpath='{.spec.type}')
+          echo "## ✅ Developer Cleanup Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Service | ${{ github.event.inputs.dev_service }} |" >> $GITHUB_STEP_SUMMARY
