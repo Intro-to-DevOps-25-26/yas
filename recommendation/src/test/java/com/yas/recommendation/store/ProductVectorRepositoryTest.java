@@ -104,6 +104,22 @@ class ProductVectorRepositoryTest extends BaseVectorRepositoryTest<ProductDocume
         assertEquals(similarDocument.getMetadata().entrySet(), productDocuments.getFirst().getMetadata().entrySet());
     }
 
+    @DisplayName("When updating document via update method, delete then add must be called")
+    @Test
+    public void testUpdateViaUpdateMethod() {
+        var productId = 1L;
+        ProductDetailVm productDetailVm = getProductDetailVm(productId);
+
+        when(productService.getProductDetail(productId)).thenReturn(productDetailVm);
+        doReturn(Optional.of(true)).when(vectorStore).delete(anyList());
+        doNothing().when(vectorStore).add(anyList());
+
+        productVectorRepository.update(productId);
+
+        verify(vectorStore, times(1)).delete(anyList());
+        verify(vectorStore, times(1)).add(anyList());
+    }
+
     @DisplayName("When creating document, document must be created as metadata defined")
     @Test
     public void testAddDocument() {

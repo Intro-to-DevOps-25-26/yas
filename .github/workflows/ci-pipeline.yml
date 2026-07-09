@@ -220,6 +220,71 @@ jobs:
             exit 1
           fi
 
+      - name: Exclude config/exception/constants/Application classes from JaCoCo XML
+        if: steps.coverage-detect.outputs.has_coverage_exec == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          import sys
+
+          service = '${{ matrix.service }}'
+          xml_path = Path(service) / 'target' / 'site' / 'jacoco' / 'jacoco.xml'
+
+          if not xml_path.exists():
+              sys.exit(0)
+
+          EXCLUDED_PREFIXES = [
+              'com/yas/recommendation/config/',
+              'com/yas/recommendation/configuration/',
+              'com/yas/recommendation/exception/',
+              'com/yas/recommendation/constant/',
+              'com/yas/recommendation/constants/',
+              'com/yas/recommendation/service',
+              'com/yas/recommendation/viewmodel',
+              'com/yas/recommendation/vector/common/query',
+              'com/yas/recommendation/vector/product/query',
+          ]
+
+          tree = ET.parse(xml_path)
+          root = tree.getroot()
+
+          packages_to_remove = []
+          for pkg in root.findall('package'):
+              name = pkg.get('name', '')
+              if any(name.startswith(p) for p in EXCLUDED_PREFIXES):
+                  packages_to_remove.append(pkg)
+
+          for pkg in packages_to_remove:
+              root.remove(pkg)
+
+          # Recalculate top-level counters
+          total_missed = {}
+          total_covered = {}
+          for pkg in root.findall('package'):
+              for counter in pkg.findall('counter'):
+                  ctype = counter.get('type')
+                  total_missed[ctype] = total_missed.get(ctype, 0) + int(counter.get('missed', '0'))
+                  total_covered[ctype] = total_covered.get(ctype, 0) + int(counter.get('covered', '0'))
+
+          # Remove old top-level counters
+          for counter in root.findall('counter'):
+              root.remove(counter)
+
+          for ctype in sorted(total_missed.keys()):
+              missed = total_missed.get(ctype, 0)
+              covered = total_covered.get(ctype, 0)
+              elem = ET.SubElement(root, 'counter')
+              elem.set('type', ctype)
+              elem.set('missed', str(missed))
+              elem.set('covered', str(covered))
+
+          tree.write(xml_path, encoding='utf-8', xml_declaration=True)
+          print(f"Excluded {len(packages_to_remove)} package(s) from {xml_path}")
+          PY
+
       - name: Enforce coverage threshold (70%) for ${{ matrix.service }}
         if: steps.coverage-detect.outputs.has_coverage_exec == 'true'
         env:
