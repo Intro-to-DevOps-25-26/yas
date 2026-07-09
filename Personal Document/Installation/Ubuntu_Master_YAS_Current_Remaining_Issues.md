@@ -1,54 +1,60 @@
 # Ubuntu Master YAS Current Remaining Issues
 
-Ngay: 2026-07-07
+Ngay: 2026-07-08
 
 ## 1. Tong Quan Hien Tai
 
-- Cac service app chinh da on dinh:
-  - `backoffice-bff`
-  - `customer`
-  - `inventory`
-  - `media`
-  - `order`
-  - `product`
+- Cleanup va rollout da duoc chay lai.
+- Node hien tai:
+  - `worker-1`: `Ready`
+  - `worker-3`: `Ready`
+  - `naul1-pc`: `Ready,SchedulingDisabled`
+- `backoffice-bff`, `backoffice-ui`, `swagger-ui` da duoc rerollout sang node khoe va da chay on dinh.
+- `sampledata` da seed thu cong xong vao dung DB `product` va `media`.
+- Con lai cac service core khac van can theo doi tiep neu muon chot cluster 100%.
+
+## 2. Cac Nhom Con Loi
+
+### Node / cluster
+
+- `worker-1`: root cause cua dot NotReady truoc do la kubelet stopped posting node status trong luc reboot/flap.
+- `worker-3`: root cause cua dot NotReady truoc do la reboot/flap node.
+- `naul1-pc`: root cause cua dot NotReady truoc do la disk pressure / image GC failed / reboot.
+
+### App / infra dang con loi
+
+- Nhom con can theo doi neu tiep tuc rollout:
+  - `cart`
   - `search`
-  - `storefront-bff`
-  - `storefront-ui`
-  - `swagger-ui`
-  - `tax`
-- Cac service ha tang chinh da Running/Ready:
-  - `keycloak`
-  - `postgres`
-  - `redis`
-  - `kafka`
-  - `elasticsearch`
-  - `coredns`
-  - `kube-flannel`
+  - `inventory`
+  - cac service core khac neu co pod moi restart
+- Cac pod test tam thoi da dung de verify DNS co the xoa sau khi khong can nua.
 
-## 2. Con Lai Can Theo Doi
+## 3. Da Lam Gi Roi
 
-### Pod kiem tra / one-off
+- Da force-delete nhieu pod cu / terminating de cluster tao lai pod moi.
+- Da restart `kube-proxy` tren `worker-1` va `naul1-pc`.
+- Da khoanh duoc log loi chinh:
+  - `istiod.istio-system.svc`
+  - `10.96.0.10:53`
+  - `connection refused` / `i/o timeout`
 
-- `default/dns-master`: `Pending`
-- `default/master-iptables-check`: `Error`
-- `default/master-routing-check`: `Error`
-- `default/sampledata-seed-manual-cp`: `Failed`
-- `default/sampledata-seed-manual-ip`: `Failed`
-- `kafka/strimzi-cluster-operator-7bf889cd5c-9k6cr`: `Running` nhung chua `Ready` 100%
+## 4. Ket Luan Ngan
 
-### Pod cu / rollout cu
+- Van de chinh truoc do la node / host instability va probe / mesh config cu, khong phai chi loi code app.
+- Sau khi rerollout sang node khoe va doi probe phu hop, nhom `backoffice-bff`, `backoffice-ui`, `swagger-ui` da chay on dinh hon.
+- `sampledata` khong con blocked vi seed data da nhap thanh cong vao dung DB.
+- Van nen theo doi them cac service core khac neu muon chot cluster 100%.
 
-- Tren `naul1-pc` con mot so pod cu cua rollout cu dang hien `Unknown`, nhung khong phai workload active hien tai:
-  - `customer-769d8454bc-5h455`
-  - `inventory-56cb4b77fb-sm8mk`
-  - `product-5ccdfdd77d-kv46d`
-  - `search-5df58bc7b7-pwfr2`
-  - `tax-c9f974f68-zm2db`
-  - `redis-replicas-1`
+## 5. Luu Y Tam Dung Istio
 
-## 3. Ket Luan Ngan
-
-- Khong con nhom app chinh nao dang CrashLoopBackOff nhu truoc.
-- `storefront-bff` da chuyen sang trang thai Running/Ready.
-- `coredns` hien tai da Ready `2/2`.
-- Cac van de con lai chu yeu la pod kiem tra, pod cu, mot so pod one-off chua clean up, va `strimzi-cluster-operator` chua Ready hoan toan.
+- Co the tam thoi scale down cac component `istio-system` neu can giam noise / giam tai khi debug node:
+  - `istiod`
+  - `istio-ingressgateway`
+  - `istio-egressgateway`
+  - `kiali`
+  - `prometheus`
+- Luu y:
+  - `namespace yas` dang co label `istio-injection=enabled`, nen chi scale control plane chua du neu muon pod moi khong inject sidecar.
+  - Trong thuc te, manifest live cua app dang co san `istio-init` va `istio-proxy` trong template, nen muon tat Istio hoan toan phai sua chart/manifests va redeploy lai app, khong chi scale `istio-system`.
+- Tat Istio tam thoi co the lam mat mTLS / xDS / webhook / telemetry, nen chi dung khi dang khoanh vung loi ha tang.

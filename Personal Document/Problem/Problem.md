@@ -182,10 +182,49 @@ Muc tieu la 4 nguoi lam song song, moi nguoi co 1 trach nhiem ro rang, khong doi
 
 | Nguoi | Viec chinh | Deliverables |
 |---|---|---|
-| `Tú` | Chot `ArgoCD` cho `dev/staging`, gom app/project, sync policy, rollback | Screenshot ArgoCD sync/health, manifest namespace/project, ghi chu flow `dev` va `staging` |
+| `Tú` | Chot `manifest/chart` cho `dev/staging` va `ArgoCD`, gom app/project, sync policy, rollback | Screenshot ArgoCD sync/health, manifest namespace/project, values `dev/staging`, ghi chu flow `dev` va `staging` |
 | `Hòa` | Lam `Istio` service mesh cho namespace app, bat `mTLS`, `AuthorizationPolicy`, `VirtualService` retry/timeout | YAML policy, screenshot Kiali topology, log `curl` test cho retry / allow / deny |
 | `Luân` | Hoan thien GitHub Actions CD cho build/push/deploy/cleanup, gom job `developer_build` va job cleanup | Screenshot workflow run, log build/push, manifest/job deploy, ghi chu cach map branch/tag |
 | `Khoa` | Don dep pod kiem tra / pod cu / rollout cu, test `NodePort`, doi chieu web app, ho tro tong hop report va screenshot | Screenshot `kubectl get pods -A -o wide`, screenshot NodePort truy cap UI, checklist pod da clean, bang tong hop trang thai |
+
+#### `manifest` / `chart` la gi
+
+- `manifest` la tap cac file YAML mo ta resource K8S:
+  - `Deployment`
+  - `Service`
+  - `Job`
+  - `ConfigMap`
+  - `Secret`
+  - `Ingress` hoac `NodePort` expose
+  - `HorizontalPodAutoscaler` neu co
+- `chart` la bo Helm gom:
+  - `Chart.yaml`
+  - `values.yaml`
+  - template trong `templates/`
+- Phan nay quyet dinh:
+  - pod chay image nao
+  - service nao expose ra sao
+  - port nao mo
+  - selector nao match
+  - namespace nao dung
+  - probe nao duoc bat
+  - Job nao seed du lieu
+- Neu manifest/chart chua on dinh thi ArgoCD se khong co “nguon chan ly” ro rang de sync.
+
+#### Ai phu trach manifest/chart
+
+- Nguoi lam manifest/chart phai chot:
+  - template Helm hoac YAML
+  - values cho `dev`, `staging`
+  - image tag mapping
+  - service type `NodePort` / `ClusterIP`
+  - probe / resource / env / secret mount
+  - Job seed `sampledata`
+- Phan nay phai khop voi:
+  - `Luân`: CD build/push/deploy/cleanup
+  - `Tú`: ArgoCD sync/rollback
+  - `Hòa`: policy mesh / injection
+  - `Khoa`: test pod / NodePort / web app
 
 #### Can chup man hinh
 
@@ -197,6 +236,43 @@ Muc tieu la 4 nguoi lam song song, moi nguoi co 1 trach nhiem ro rang, khong doi
 - Ket qua `curl` / browser khi test `swagger-ui`, `storefront-ui`, `backoffice-ui`
 - GitHub Actions workflow run cho build/deploy/cleanup
 - `Khoa` tong hop screenshot trang thai pod / NodePort / web app de dua vao report
+
+#### ArgoCD chi nen bat khi
+
+- `Tú` da chot xong manifest/chart co ban:
+  - Helm template/YAML chay ra dung `Deployment`, `Service`, `Job`
+  - `values` cho `dev/staging` da tach ro va khong con copy/paste hard-code
+  - service type, selector, port, probe da on dinh
+  - `sampledata` chay dung kieu seed mot lan, khong con coi nhu workload lau dai
+  - manifest co the `helm template` ra YAML hop le va co the apply thu cong thanh cong
+- `Luân` da co CI/CD build/push image on dinh:
+  - image build thanh cong theo branch / commit / tag
+  - push len Docker Hub
+  - mapping image tag khong con thay doi lung tung
+  - workflow deploy co the nhan dung image tag can de rollout
+  - cleanup job da biet xoa ban deploy cu ma khong lam hong ban moi
+- `Hòa` da xac nhan Istio/mTLS khong con chan rollout:
+  - webhook / injection / policy da test on
+  - rollout restart khong bi timeout nua
+  - `mTLS` / `AuthorizationPolicy` / `VirtualService` da test co ket qua
+  - service mesh khong con tao them lỗi webhook khi deploy app
+- `Khoa` da xac nhan web app demo va NodePort chay duoc:
+  - swagger/storefront/backoffice truy cap duoc
+  - pod cu / pod test khong con lam nhieu noise
+  - screenshot browser/curl duoc chup day du
+  - cac endpoint demo co the verify nhanh sau moi deploy
+- `Tú` da co ArgoCD app/project/rollback flow:
+  - app healthy/sync
+  - rollback test duoc
+  - `dev` co auto sync duoc, `staging` co quy tac release ro
+  - co app/project rieng cho tung namespace
+  - ArgoCD doc duoc manifest/chart da chot o tren
+- cluster khong con loi node/dns/changing selector lam lech deploy:
+  - node `Ready`
+  - DNS/CoreDNS on
+  - NodePort truy cap duoc
+  - khong con loi webhook/sidecar/injection chan rollout
+  - rollout restart khong bi timeout do loi he thong
 
 #### Can viet report
 
@@ -270,6 +346,67 @@ Phuong an nang cao:
   - `dev`: auto sync cho branch main / integration
   - `staging`: sync theo release tag / release branch
 - neu can rollback thi rollback bang revision cua ArgoCD, khong sua tay tren cluster
+
+#### Dieu kien de bat dau ArgoCD
+
+- CI build image da on dinh:
+  - build thanh cong theo branch / commit / tag
+  - image push len Docker Hub dung ten va tag ro rang
+  - cac service thay doi co the map duoc sang dung image tag
+- Manifest deploy da on dinh:
+  - chart/manifest khong con thay doi lien tuc
+  - namespace, service name, selector, port da chot
+  - values cho `dev` va `staging` da tach ro
+- Cluster da duoc chuan bi:
+  - node `Ready`
+  - DNS / CoreDNS / NodePort / web app demo da test duoc
+  - neu co service mesh thi webhook / injection / istio da on dinh
+- Quy tac rollout da ro:
+  - `dev` chap nhan auto sync lien tuc
+  - `staging` chi sync khi co release tag / release branch
+  - rollback phai lam duoc bang Git/ArgoCD revision
+- Co quy uoc ownership:
+  - ai sua manifest
+  - ai approve release
+  - ai rollback neu co loi
+- Co deliverables co the chup / bao cao:
+  - ArgoCD app healthy/sync
+  - log sync/rollback
+  - diff Git truoc va sau khi ArgoCD apply
+
+#### Tien do chi tiet can dat cua tung nguoi
+
+- `Luân`:
+  - it nhat 1 service da build/push image on dinh tu GitHub Actions
+  - tag image theo commit/branch/release da co quy uoc ro
+  - deploy job co the rollout mot service ma khong anh huong service khac
+  - cleanup job co the xoa ban cu ma khong xoa nham ban moi
+  - log workflow run duoc luu de chup man hinh vao report
+- `Hòa`:
+  - Istio da cai xong va `istiod` chay on
+  - namespace app da bat injection va khong con timeout khi restart pod
+  - `mTLS` da bat va test `curl` duoc ca allow/deny
+  - `AuthorizationPolicy` va `VirtualService` da co bang chung retry/timeout
+  - rollout app khong con bi webhook/injection chan
+- `Khoa`:
+  - `swagger-ui`, `storefront-ui`, `backoffice-ui` truy cap duoc qua `NodePort`
+  - browser/curl test da chup duoc screenshot
+  - pod cu/pod test da clean hoac da danh dau ro
+  - co bang tong hop trang thai web app va NodePort
+  - can co it nhat 1 lan verify lai sau deploy that de chac khong bi noise
+- `Tú`:
+  - manifest/chart da on dinh va render ra YAML hop le
+  - values `dev/staging` da tach
+  - ArgoCD app/project/rollback flow da co san
+  - app deploy thu cong con chay duoc truoc khi chuyen qua sync tu Git
+
+#### Khi chua nen bat ArgoCD
+
+- CI chua build/push image on dinh
+- manifest con sua lien tuc hoac selector/port con loang
+- cluster van con loi node, DNS, webhook, hoac sidecar injection
+- chua co quy uoc ro ve branch/tag cho `dev` va `staging`
+- chua co cach rollback / thay doi release ro rang
 
 ### 5.3 CD chot su dung GitHub Actions
 
@@ -473,13 +610,13 @@ Ket luan: co the dung stack nay de demo local va lam buoc tiep theo sang K8S / C
 
 Trang thai thuc te hien tai:
 
-- `search` da on dinh trong K8S, pod start thanh cong va tra `200 OK` qua `port-forward` vao service
-- `storefront` tra `200 OK`
-- `backoffice` tra `302 Found`
-- `sampledata` da seed thanh cong mot lan va co the tat sau do
-- `Keycloak` va cac BFF da duoc giai quyet loi DNS / `identity` trong cluster
+- `search` da on dinh trong K8S sau khi pin `co.elastic.clients:elasticsearch-java` ve `8.15.0`, rollout lai va pod da len `1/1 Ready`
+- `product`, `order`, `tax` da fix xong va Ready sau khi sua probe/runtime
+- `cart`, `customer`, `inventory`, `media`, `storefront-bff`, `storefront-ui`, `backoffice-bff`, `backoffice-ui`, `swagger-ui` hien dang on dinh trong cluster
+- `sampledata` la Job seed mot lan, khong chay thuong truc
+- `Keycloak` va cac BFF van phu thuoc vao rollout lai cluster app sau khi cac service core duoc mo lai
 - OTEL local co the coi la log noise khi khong can observability day du, nhung collector van duoc giu de phuc vu service mesh / observability ve sau
-- K8S local da co cluster 1 master + 3 worker va deploy duoc core service tren cluster nay
+- K8S local da co cluster 1 master + 3 worker va co the rollout lai tung service khi can
 
 ## 13. Checklist trang thai
 
@@ -492,8 +629,10 @@ Trang thai thuc te hien tai:
 - [x] Kiem tra endpoint that cho `product`, `cart`, `order`, `customer`, `inventory`, `tax`, `media`, `search`
 - [x] Kiem tra UI/BFF cho `storefront`, `backoffice`, `swagger-ui`
 - [x] Giai quyet loi `search` bootstrap Elasticsearch (`indices.exists`)
+- [x] Pin dung `co.elastic.clients:elasticsearch-java` ve `8.15.0` de dung `RangeQuery.Builder.number(...)`
 - [x] Giai quyet loi runtime `slf4j-api` trong `search`
 - [x] Xac nhan `search` tra `200 OK` sau khi fix va redeploy
+- [x] Xac nhan `product`, `order`, `tax` da Ready sau khi fix probe/runtime
 - [x] Seed `sampledata` thanh cong va xac nhan du lieu da vao DB
 - [x] Khoi tao K8S local 1 master + 3 worker va deploy core service thanh cong
 - [x] Giai quyet loi DNS / `identity` / Keycloak lam `storefront-bff` va `backoffice-bff` treo
@@ -502,6 +641,7 @@ Trang thai thuc te hien tai:
 - [x] Xac dinh `sampledata` chi can chay mot lan de seed du lieu
 - [x] Da fix `search` fallback Kafka ve `kafka:9092`
 - [x] Da fix `wait-for-it.sh` CRLF sang LF
+- [ ] Kiem tra lai cac service con lai neu co thay doi image/tag hoac chart
 
 ### Da chot thiet ke
 
@@ -515,6 +655,12 @@ Trang thai thuc te hien tai:
 
 ### Con lai
 
+- Chot bao cao trang thai cuoi cung cua core service, khong de checklist con ghi nham service da fix
+- Cap nhat cac file status/report lien quan neu rollout hay pin version co thay doi
+- Ghi ro cac service con lai neu sau nay co phat sinh regression
+- Tap trung vao chart/manifest, health check, rollout, cleanup, va ArgoCD
+- Bo qua service mesh trong scope hien tai
+
 #### 13.1 Local compose va local test
 
 - [ ] Phan loai compose: giu co the giu service du neu khong gay hai, nhung phai document ro core 14 service + `sampledata`
@@ -522,8 +668,8 @@ Trang thai thuc te hien tai:
 
 #### 13.2 K8S cluster va deploy
 
-- [ ] Hoan thien health check cho K8S: `readinessProbe`, `livenessProbe`, actuator health cho toan bo service
-- [ ] Viet manifest `Deployment`, `Service`, `Job` chuan cho 14 service core
+- [ ] Hoan thien chart/manifest: `Deployment`, `Service`, `Job` chuan cho 14 service core
+- [ ] Chuan hoa health check: `readinessProbe`, `livenessProbe`, actuator health cho toan bo service
 - [ ] Kiem tra worker scheduling, pod anti-affinity neu can
 - [ ] Kiem tra rollout / rollback cho cac chart quan trong
 - [ ] Chot NodePort / ClusterIP / Job dung voi scope
@@ -538,21 +684,21 @@ Trang thai thuc te hien tai:
 - [ ] Hoan thien deploy/cleanup cho `developer_build`
 - [ ] Chot namespace va quy tac image tag cho moi environment
 
-#### 13.4 Service mesh bat buoc
+#### 13.4 GitOps ArgoCD
 
-- [ ] Bat mTLS cho cluster/namespace ap dung
-- [ ] Viet `AuthorizationPolicy` cho cac cuoc goi allowed
-- [ ] Viet `VirtualService` retry / timeout
-- [ ] Cai va dung Kiali de xem topology
-- [ ] Test `curl` tu pod khac de chung minh allow/deny
-- [ ] Thu thap log / evidence cho retry va policy
+- [ ] Chot app/project cho `dev` va `staging`
+- [ ] Chot sync policy va rollback flow cua ArgoCD
+- [ ] Chot manifest/chart da on dinh truoc khi ArgoCD lay lam nguon chan ly
+- [ ] Kiem tra diff Git va cluster sau khi ArgoCD sync
+- [ ] Viet huong dan deploy/rollback bang ArgoCD
 
 #### 13.5 Tieu chi hoan thanh
 
 - [ ] Core 14 service chay on dinh
 - [ ] `sampledata` seed thanh cong va co the tat
+- [ ] Chart/manifest + health check on dinh
 - [ ] CI/CD build va deploy chay dung
-- [ ] Service mesh co mTLS, policy, retry, va Kiali evidence
+- [ ] ArgoCD sync/rollback chay dung cho `dev` va `staging`
 - [ ] Tai lieu va checklist dong bo voi trang thai thuc te
 
 ## 14. K8S 4 may + Tailscale
@@ -603,35 +749,54 @@ Muc tieu la dung 4 may vat ly/debian/ubuntu de tao 1 cluster K8S duy nhat:
   - Ton nhieu cong kich hoat cluster, route, DNS, image tag, va rollout
   - Sau khi khuon mau da on, deploy thuong lap lai nhanh hon fix app
 
-### 15.2 Giao task cho 3 nguoi
+### 15.2 Giao task cho 4 nguoi
 
-#### Nguoi 1: Cluster va ha tang
+Thu tu uu tien:
 
-- Cai 4 may + Tailscale
-- Tao cluster 1 master + 3 worker
-- Cai namespace, secrets chung, CoreDNS, NodePort route
-- Chot health check co ban va verify `kubectl get nodes`, `kubectl get pods`
+1. Chot chart/manifest + health check cho 14 service core.
+2. Chot CI/CD build/push/deploy/cleanup.
+3. Rollout/rollback, NodePort, hosts va test route.
+4. Lam ArgoCD dev/staging sau cung khi manifest/chart da on dinh.
 
-#### Nguoi 2: App deploy va Helm
+#### Tú: Manifest/Chart + ArgoCD
 
-- Hoan thien chart/values cho 14 service core
-- Hoan thien `sampledata` Job
-- Hoan thien workflow GitHub Actions deploy bang Helm
-- Kiem tra tag image, namespace, rollout, cleanup
+- Chot chart/manifest co ban cho 14 service core, gom `Deployment`, `Service`, `Job`
+- Chot `values.yaml` cho `dev` va `staging`
+- Tao `ArgoCD Application`/`AppProject`, sync policy, rollback flow
+- Kiem tra manifest/chart da on dinh truoc khi ArgoCD sync
+- Chup screenshot ArgoCD sync/health va tong hop flow `dev` / `staging`
 
-#### Nguoi 3: Fix app va service mesh
+#### Luân: CI/CD build/push/deploy/cleanup
 
-- Fix chuoi loi app con lai, dac biet `search`, BFF, Kafka, Elasticsearch, Keycloak
-- Hoan thien health endpoint va readiness/liveness
-- Lam service mesh nang cao bat buoc: mTLS, AuthorizationPolicy, VirtualService retry, Kiali
+- Hoan thien GitHub Actions cho build/push image theo commit/tag/branch
+- Hoan thien job `developer_build`
+- Hoan thien job cleanup / xoa deployment cu
+- Chot rule image tag va cach map branch -> image
+- Chup screenshot workflow run, log build/push, va manifest/job deploy
 
-### 15.3 Phan nang cao bat buoc
+#### Hòa: Health check va chart tuning
 
-- [ ] mTLS giua cac service
-- [ ] AuthorizationPolicy
-- [ ] VirtualService retry cho loi 500
-- [ ] Kiali topology
-- [ ] Test bang `kubectl exec` va `curl`
+- Chuan hoa `readinessProbe`, `livenessProbe`, `startupProbe` va actuator health cho 14 service core
+- Sua chart/values neu probe, port, config map, secret, hay volume mount bi sai
+- Hoan thien `sampledata` theo Job 1 lan seed
+- Kiem tra startup/runtime log de dam bao service len `Ready`
+- Chup log fix, file chart/values, va bang checklist service da Ready
+
+#### Khoa: Rollout/rollback + NodePort + test route
+
+- Kiem tra rollout/rollback sau moi lan deploy
+- Kiem tra NodePort, hosts, va route tu may dev
+- Don pod cu / pod test / resource rac sau khi rollout
+- Test web app va API docs bang browser/curl
+- Tong hop screenshot `kubectl get pods -A -o wide`, NodePort truy cap UI, va trang thai cluster
+
+### 15.3 Thu tu lam
+
+- [ ] Chat luong chart/manifest va health check truoc
+- [ ] Build/push/deploy/cleanup tiep theo
+- [ ] Rollout/rollback + NodePort + hosts/test route
+- [ ] ArgoCD `dev` / `staging` sau cung khi manifest/chart da on dinh
+- [ ] Cap nhat screenshot va report theo trang thai thuc te
 
 ## 16. YML deploy Helm nhap vai tro de chot scope
 

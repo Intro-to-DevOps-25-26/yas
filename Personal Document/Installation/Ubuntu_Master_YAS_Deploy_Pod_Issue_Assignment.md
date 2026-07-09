@@ -13,83 +13,66 @@ Ngay: 2026-07-06
 
 ### `master` - `Tú`
 
-- CoreDNS da duoc pin sang worker node va da dat `2/2 Ready`
-- Pod network tren master da duoc fix:
-  - `kube-apiserver` advertise ve `192.168.2.16`
-  - `Endpoints/default/kubernetes` tro ve `192.168.2.16`
-  - `ufw` da mo `6443/tcp` cho `10.244.0.0/16`
-  - pod tren master da chạm duoc `10.96.0.1:443`
+- Control-plane van chay on
+- `kube-apiserver` / `etcd` / `scheduler` / `controller-manager` dang `Running`
+- Cac van de hien tai khong con nam o master, ma nam o node worker / service network
+- Nen tiep tuc theo doi cac log lien quan `istiod`, `coredns`, `kube-proxy`
 
 ### `worker-1` - `Hòa`
 
-- Da hoan thanh phan giao:
-  - `keycloak/keycloak-0`: `Running`
-  - `yas/customer-*`: `Running`
-  - `yas/inventory-*`: `Running`
-  - `yas/product-*`: `Running`
-  - `yas/tax-*`: `Running`
-- Cac pod con loi tren `worker-1` nhung thuoc scope nhom khac:
-  - Hien tai khong con pod app active nao loi tren `worker-1`
-  - Cac pod rollout cu/obsolete neu co da khong con thuoc scope debug chinh
+- `worker-1` hien tai `Ready`
+- Da dung de chay lai `backoffice-bff`, `backoffice-ui`, `swagger-ui`
+- DNS noi bo da verify duoc trong luc node on dinh:
+  - `identity.yas.local.com -> 10.98.44.199`
+  - `postgresql.postgres.svc.cluster.local -> 10.108.199.46`
+  - `github.com`, `google.com` resolve duoc qua CoreDNS
 
 ### `naul1-pc` - `Luân`
 
-- `elasticsearch/elasticsearch-es-node-0`: `Running`
-- `yas/storefront-bff-6b58dd48c7-zr2rb`: `Running`
-- Mot so pod cu cua rollout truoc con hien `Unknown`, nhung khong con la pod active
+- `naul1-pc` hien tai `Ready,SchedulingDisabled`
+- Da khong con la diem chay chinh cho rollout moi sau khi `backoffice-*` duoc day sang node khoe
+- Van co the dung de theo doi, nhung khong nen coi la node chay workload chinh luc nay
 
 ### `worker-3` - `Khoa`
 
-- `kafka/debezium-connect-cluster-connect-0`: `Running`
-- `redis/redis-replicas-0`: `Running`
-- `yas/cart-*`: `Running`
-- `yas/media-*`: `Running`
-- `yas/search-*`: `Running`
-- `yas/storefront-bff-*`: khong con pod active loi tren node nay
-- `strimzi-cluster-operator-7bf889cd5c-9k6cr`: `Running` nhung chua `Ready` 100%
+- `worker-3` hien tai `Ready`
+- Da nhan lai pod moi cho rollout sau khi node on dinh
 
 ## 3. Phan Cong Fix
 
 ### `master` - `Tú`
 
-- DNS cluster da hoi phuc.
-- Pod network tren master da on dinh lai cho service `kubernetes`/API server.
-- Xac minh service discovery cho `postgresql`, `kafka-cluster-kafka-bootstrap`, `redis-master`, `keycloak-service`.
-- Neu co thay doi infra, chi can kiem tra lai DNS/service discovery va rollout cac pod backend dang phu thuoc.
+- Giam sat control-plane, DNS, service discovery.
+- Kiem tra lai `coredns`, `istiod`, `kube-proxy` neu service DNS tiep tuc loi.
+- Neu co thay doi infra, can verify lai ngay sau moi lan cleanup / recreate pod.
 
 ### `worker-1` - `Hòa`
 
-- Da hoan thanh phan giao:
-  - `keycloak-0` da len `Running`
-  - `customer`, `inventory`, `product`, `tax` da rollout thanh cong
-- Khong con phan fix thuoc scope Hòa trong assignment ban dau.
-- Cac pod app tren `worker-1` hien da on dinh.
+- `backoffice-bff`, `backoffice-ui`, `swagger-ui` da duoc rollout lai sang node khoe va da chay on dinh.
+- Phan can luu y them:
+  - probe cu ban vao `15020` chi hop le khi co Istio sidecar
+  - neu khong co sidecar thi phai doi sang probe truc tiep vao cong app
 
 ### `naul1-pc` - `Luân`
 
-- `elasticsearch-es-node-0` da `Running`.
-- `storefront-bff` hien dang Running/Ready tren node nay.
-- Cac pod cu cua rollout truoc con ton tai nhung khong con la workload active.
+- `naul1-pc` van co the theo doi cac pod stateful khi can, nhung khong con la node rollout chinh.
 
 ### `worker-3` - `Khoa`
 
-- `debezium-connect-cluster-connect-0` da `Running`.
-- `redis-replicas-0` da `Running`.
-- Cac pod app lien quan da on dinh.
-- Khong con storefront-bff loi tren `worker-3`.
+- `worker-3` da on dinh lai va co the tiep tuc schedule workload.
 
 ## 4. Thu Tu De Xu Ly
 
-1. `master` - `Tú`: da hoan tat DNS / CoreDNS va overlay.
-2. `worker-1` - `Hòa`: da hoan thanh.
-3. `worker-3` - `Khoa`: da hoan thanh.
-4. `naul1-pc` - `Luân`: da hoan thanh cho phan node / infrastructure.
-5. Phan con lai: don dep pod cu va pod kiem tra.
+1. `worker-1` - `Hòa`: lam on dinh node va kubelet first.
+2. `worker-3` - `Khoa`: khoi phuc node `NotReady`.
+3. `naul1-pc` - `Luân`: theo doi pod stateful / pod pending sau cleanup.
+4. `master` - `Tú`: giam sat control-plane va rollout lai sau khi node on dinh.
+5. Phan con lai: don dep cac pod test/one-off con treo.
 
 ## 5. Ghi Chu
 
-- Cac pod `*_debug`, `host-*`, `crictl-*`, `dnscheck-*`, `netcheck-*`, `sampledata-seed-*` la pod tam thoi de debug, khong tinh vao workload chinh.
-- `sampledata` da seed thu cong thanh cong, khong con la blocked item.
+- Cac pod `*_debug`, `host-*`, `crictl-*`, `dnscheck-*`, `netcheck-*`, `sampledata-seed-*` van la pod tam thoi de debug, khong tinh vao workload chinh.
+- `sampledata` khong con la blocked item chinh, nhung chi nen chot lai sau khi cluster on dinh.
 
 ## 6. Nguyen Nhan Van Hanh
 
@@ -139,16 +122,11 @@ Ngay: 2026-07-06
 
 ## 10. Trang Thai Doi Chieu Moi Nhat
 
-- Da doi chieu lai sau cap nhat gan nhat:
-  - `keycloak`, `customer`, `inventory`, `product`, `tax`, `debezium-connect-cluster-connect`, `redis-replicas`, `elasticsearch-es-node`, `coredns`, `storefront-bff` dang o trang thai dung.
-  - Khong con nhom app chinh nao CrashLoopBackOff.
-  - Cac pod con loi chu yeu la pod cu, pod one-off, va pod test/verify:
-    - `dns-master`
-    - `master-iptables-check`
-    - `master-routing-check`
-    - `sampledata-seed-manual-cp`
-    - `sampledata-seed-manual-ip`
-    - `strimzi-cluster-operator`
-    - mot so pod rollout cu tren `naul1-pc`
-- Cac muc da danh dau `hoan thanh` trong file hien nay phu hop hon voi thuc te.
-- Neu can cap nhat tiep, uu tien don dep pod cu va pod kiem tra khong con dung nua.
+- Sau rerollout:
+  - `backoffice-bff` -> `1/1 Running`
+  - `backoffice-ui` -> `1/1 Running`
+  - `swagger-ui` -> `1/1 Running`
+- `sampledata` da seed thu cong xong:
+  - `product` db: `brand=4`, `category=9`, `product=14`, `product_attribute_value=91`, `product_image=56`, `product_option_value=0`, `product_option_combination=0`
+  - `media` db: `media=82`
+- Neu can tiep tuc rollout cac service core khac, nen lam tren node khoe va kiem tra probe / mesh config truoc.
