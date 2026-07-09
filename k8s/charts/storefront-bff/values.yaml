@@ -2,6 +2,8 @@ backend:
   image:
     repository: ghcr.io/nashtech-garage/yas-storefront-bff
     tag: latest
+  serviceMonitor:
+    enabled: false
 
   nameOverride: storefront-bff
   fullnameOverride: storefront-bff

@@ -118,7 +118,7 @@ startupProbe:
     port: metric
 
 serviceMonitor:
-  enabled: true
+  enabled: false
 
 service:
   type: ClusterIP
