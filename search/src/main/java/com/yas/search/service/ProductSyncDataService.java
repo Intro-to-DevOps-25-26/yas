@@ -7,21 +7,30 @@ import com.yas.search.model.Product;
 import com.yas.search.repository.ProductRepository;
 import com.yas.search.viewmodel.ProductEsDetailVm;
 import java.net.URI;
-import lombok.RequiredArgsConstructor;
 import java.util.logging.Logger;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
-@RequiredArgsConstructor
 public class ProductSyncDataService {
 
     private static final Logger LOGGER = Logger.getLogger(ProductSyncDataService.class.getName());
 
     private final RestClient restClient;
     private final ServiceUrlConfig serviceUrlConfig;
-    private final ProductRepository productRepository;
+    private final ObjectProvider<ProductRepository> productRepositoryProvider;
+
+    public ProductSyncDataService(
+            RestClient restClient,
+            ServiceUrlConfig serviceUrlConfig,
+            ObjectProvider<ProductRepository> productRepositoryProvider
+    ) {
+        this.restClient = restClient;
+        this.serviceUrlConfig = serviceUrlConfig;
+        this.productRepositoryProvider = productRepositoryProvider;
+    }
 
     public ProductEsDetailVm getProductEsDetailById(Long id) {
         final URI url = UriComponentsBuilder.fromUriString(
@@ -34,6 +43,7 @@ public class ProductSyncDataService {
 
     public void updateProduct(Long id) {
         ProductEsDetailVm productEsDetailVm = getProductEsDetailById(id);
+        ProductRepository productRepository = productRepositoryProvider.getObject();
         Product product = productRepository.findById(id).orElseThrow(()
                 -> new NotFoundException(MessageCode.PRODUCT_NOT_FOUND, id));
 
@@ -58,6 +68,7 @@ public class ProductSyncDataService {
 
     public void createProduct(Long id) {
         ProductEsDetailVm productEsDetailVm = getProductEsDetailById(id);
+        ProductRepository productRepository = productRepositoryProvider.getObject();
 
         Product product = Product.builder()
                 .id(id)
@@ -78,6 +89,7 @@ public class ProductSyncDataService {
     }
 
     public void deleteProduct(Long id) {
+        ProductRepository productRepository = productRepositoryProvider.getObject();
         final boolean isProductExisted = productRepository.existsById(id);
         if (isProductExisted) {
             productRepository.deleteById(id);
