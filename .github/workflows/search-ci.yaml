@@ -22,6 +22,7 @@ permissions:
   actions: write
   statuses: write
   checks: write
+  packages: write
 
 jobs:
   Build:
@@ -93,7 +94,8 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         shell: bash
         run: |
-          BASE="ghcr.io/nashtech-garage/yas-search"
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          BASE="ghcr.io/${OWNER}/yas-search"
           TAGS="$BASE:${{ github.sha }}"
           TAGS="$TAGS,$BASE:latest"
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
@@ -110,11 +112,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           cat > image-metadata-search.json <<EOF
           {
             "service": "search",
             "image_tag": "${{ github.sha }}",
-            "image_ref": "ghcr.io/nashtech-garage/yas-search:${{ github.sha }}",
+            "image_ref": "ghcr.io/${OWNER}/yas-search:${{ github.sha }}",
             "image_digest": "${{ steps.build.outputs.digest }}"
           }
           EOF
@@ -125,7 +128,7 @@ jobs:
             echo "| Field | Value |"
             echo "|---|---|"
             echo "| Image tag | ${{ github.sha }} |"
-            echo "| Image ref | ghcr.io/nashtech-garage/yas-search:${{ github.sha }} |"
+            echo "| Image ref | ghcr.io/${OWNER}/yas-search:${{ github.sha }} |"
             echo "| Image digest | ${{ steps.build.outputs.digest }} |"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload image metadata artifact
