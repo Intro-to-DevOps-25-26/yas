@@ -3,6 +3,8 @@ backend:
     repository: ghcr.io/intro-to-devops-25-26/yas-search
     digest: sha256:7a013f81583708992706ca1173f72ed4d49e961461ac75b3eaac8750d9843eb1
     tag: latest
+  imagePullSecrets:
+    - name: ghcr-pull-secret
   serviceMonitor:
     enabled: false
 
