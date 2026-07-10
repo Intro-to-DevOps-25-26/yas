@@ -14,7 +14,7 @@ spec:
       values: |
         ui:
           image:
-            tag: "latest"
+            digest: "sha256:dce545b45342adbcdfc0e7bfa3131a87ccb967a7ae02885e0009950a2324a3ae"
           service:
             type: NodePort
   destination:

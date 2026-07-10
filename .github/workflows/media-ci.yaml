@@ -99,8 +99,38 @@ jobs:
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
       - name: Build and push Docker images
         if: ${{ github.ref == 'refs/heads/main' }}
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ./media
           push: true
           tags: ${{ steps.docker-tags.outputs.tags }}
+      - name: Export image metadata
+        if: ${{ github.ref == 'refs/heads/main' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > image-metadata-media.json <<EOF
+          {
+            "service": "media",
+            "image_tag": "${{ github.sha }}",
+            "image_ref": "ghcr.io/nashtech-garage/yas-media:${{ github.sha }}",
+            "image_digest": "${{ steps.build.outputs.digest }}"
+          }
+          EOF
+
+          {
+            echo "## Image metadata for media"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Image tag | ${{ github.sha }} |"
+            echo "| Image ref | ghcr.io/nashtech-garage/yas-media:${{ github.sha }} |"
+            echo "| Image digest | ${{ steps.build.outputs.digest }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload image metadata artifact
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-metadata-media
+          path: image-metadata-media.json

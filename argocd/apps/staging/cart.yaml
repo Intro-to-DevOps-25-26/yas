@@ -14,7 +14,7 @@ spec:
       values: |
         backend:
           image:
-            tag: "latest"
+            digest: "sha256:16b351fd919079fbd2a1e22ab1190772c684302cb9f0c907800ebcaa01039329"
           serviceMonitor:
             enabled: false
   destination:

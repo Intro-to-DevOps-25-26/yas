@@ -7,6 +7,7 @@ spec:
   description: YAS development environment
   sourceRepos:
     - https://github.com/Intro-to-DevOps-25-26/yas.git
+    - https://stakater.github.io/stakater-charts
   destinations:
     - namespace: yas-dev
       server: https://kubernetes.default.svc
@@ -18,4 +19,3 @@ spec:
       kind: "*"
   orphanedResources:
     warn: true
-

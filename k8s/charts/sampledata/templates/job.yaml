@@ -4,6 +4,11 @@ metadata:
   name: {{ include "sampledata.fullname" . }}
   labels:
     {{- include "sampledata.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: hook-succeeded,before-hook-creation
 spec:
   backoffLimit: {{ .Values.sampledata.job.backoffLimit }}
   ttlSecondsAfterFinished: {{ .Values.sampledata.job.ttlSecondsAfterFinished }}
@@ -24,7 +29,7 @@ spec:
         - name: sampledata
           securityContext:
             {{- toYaml .Values.sampledata.securityContext | nindent 12 }}
-          image: "{{ .Values.sampledata.image.repository }}:{{ .Values.sampledata.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "sampledata.image" . }}"
           imagePullPolicy: {{ .Values.sampledata.image.pullPolicy }}
           envFrom:
             - secretRef:

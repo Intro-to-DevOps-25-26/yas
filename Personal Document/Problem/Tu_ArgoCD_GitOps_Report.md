@@ -79,6 +79,8 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - `helm upgrade --install` da test fallback voi `latest` tren namespace `yas-dev`.
 - Cac workflow service rieng da duoc chuan hoa sang SHA tag khi build/push, de tranh phu thuoc vao `latest`.
 - Da co helper `k8s/deploy/sync-gitops-image-tag.sh` de cap nhat overlay dev/staging theo SHA tag.
+- Da cap nhat workflow deploy thu cong de nhan `image_digest`, va chart backend/ui/swagger-ui/sampledata co the render image theo `repo@digest`.
+- Da dong bo metadata `image_digest` cho toan bo workflow CI service-specific.
 - `values-dev.yaml` va `values-staging.yaml` da duoc pin tam thoi sang `0c605cb4` de test GitOps flow local.
 - `helm template` da pass lai cho `product` va `storefront-ui` voi overlay SHA moi.
 - `yas-configuration` da duoc install vao `yas-dev` de cap configmap/secret cho cac service core.
@@ -101,8 +103,15 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - `argocd-application-controller` da quay lai `Running`.
 - `product` da quay ve `1/1 Running`.
 - `sampledata` Job da seeding xong va `Complete 1/1`.
+- `sampledata` Application da duoc chuyen sang `automated.prune=true` de xoa resource cu khi chart doi tu `Deployment` sang `Job`.
+- `sampledata` Job da duoc chuyen sang hook `PostSync` de tranh bi ArgoCD theo doi nhu workload thuong tru.
 - ArgoCD namespace `argocd` da install xong; controller, server, repo-server, redis, dex, notifications, applicationset deu da Ready.
 - `argocd-initial-admin-secret` da duoc tao trong namespace `argocd`.
+- `backoffice-bff` da duoc khoi phuc runtime:
+  - realm `Yas` da import lai thanh cong trong Keycloak
+  - OIDC discovery `http://identity.yas.local.com/realms/Yas/.well-known/openid-configuration` tra ve `200 OK`
+  - workload `backoffice-bff` da chay on dinh tren `worker-1`
+- `naul1-pc` da duoc uncordon lai; `worker-3` van can theo doi vi co hien tuong flap `NotReady` va dang duoc cordon de tranh schedule sai.
 
 ## Viec con lai cua Tú
 
@@ -115,27 +124,50 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - `kubectl kustomize` da pass cho `argocd/apps/dev` va `argocd/apps/staging`.
 - `product` da ve `1/1 Running`.
 - `sampledata` Job da seeding xong va `Complete 1/1`.
+- `sampledata-dev/staging` can prune/sync lai de bo resource cu con treo.
+- `sampledata` nen duoc sync lai sau khi doi sang hook de xac nhan khong con OutOfSync sau seed xong.
 
 ### 2. Viec con lai chua lam xong
 
-- Cho CI/CD cua Luân publish immutable tag that thi moi pin duoc tag that cho `dev` / `staging`.
-- Sau khi co tag that:
+- Da pin xong `argocd/apps/dev` va `argocd/apps/staging` bang `image.digest` that lay tu image dang chay.
+- Sau khi co digest that:
   - sync thu cong cac app con lai
   - kiem tra `Healthy` / `Synced`
   - test rollback theo revision
   - chup screenshot va dong goi bao cao cuoi
-- Hien tai cac Application da tao ra, nhung chi `product-dev` da sync xong; cac app con lai can sync tiep neu muon dong bo day du trang thai GitOps.
+- Hien tai cac Application da tao ra, va `sampledata` da ve `Healthy`; phan con lai can tiep tuc quan sat runtime.
+- `sampledata-dev` va `sampledata-staging` da duoc refresh, khong con la blocker `OutOfSync`.
+- `developer-build` da nhan them `image_digest` input, va sampledata duoc special-case ve `postgres:16.3-alpine` de khong bi lech chart path.
+
+## Loi con lai can luu y
+
+- `worker-3` van co nguy co flap `NotReady`; neu quay lai flap thi khong nen schedule app runtime len node nay.
+- `backoffice-bff` da fix xong root cause Keycloak realm, nhung van phai theo doi neu node schedule quay ve worker co van de.
+- `image.digest` helper da co trong backend/ui/swagger-ui/sampledata, nen CD co the uu tien immutable image neu CI/CD cung cap digest that.
+- ArgoCD sync hien tai van bi chan boi `ComparisonError` tu `argocd-repo-server`:
+  - service `argocd-repo-server` khong co endpoint hop le
+  - worker-1 va worker-3 dang `NotReady` / `unreachable`
+  - `naul1-pc` dang `SchedulingDisabled`
+  - neu khong co node Ready thi ArgoCD khong the compare/sync dang hoang
+- Sau khi repo-server da len lai, compare van co luc bi DNS timeout toi `10.96.0.10:53`, nen sync status chua thoat `Unknown` hoan toan.
+- Cac app `customer`, `media`, `order`, `search` da duoc xac minh la runtime that:
+  - startup probe fail
+  - `connection refused` hoac `context deadline exceeded`
+  - khong phai chi la status cu
+- Namespace `yas` legacy da xoa; pham vi hien tai chi con `yas-dev` va `yas-staging`.
 
 ## Task con lai cho ArgoCD
 
-- Thay `latest` bang immutable SHA tag khi CI/CD publish xong.
-- Sync lai cac app con lai neu image registry da co tag that.
+- Thay `latest` bang `image.digest` that khi ci/cd/cluster da co image dang chay hop le.
+- Sync lai cac app con lai neu status ArgoCD van chua cap nhat sau refresh.
 - Test rollback cho app da sync on dinh.
 - Chup screenshot:
   - AppProject / Application YAML
   - ArgoCD UI `Synced` / `Healthy`
   - Diff / sync / rollback neu co
 - Cap nhat report final theo ket qua that tren cluster.
+- Hoan tat `sampledata` sync/prune de `OutOfSync` ve `Synced`.
+- Quet lai cac app con `Progressing` / `Degraded` sau khi cluster on dinh hon va chi con la chi so stale hay root cause runtime.
 
 ### 3. Viec con lai chi phu thuoc CI/CD / cluster
 
@@ -207,6 +239,33 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - ArgoCD server va repo/controller da Ready trong namespace `argocd`.
 
 ## Thu tu uu tien
+
+1. Don sach `sampledata-dev/staging` de het `OutOfSync`.
+2. Xac minh lai cac app `Progressing` / `Degraded` con lai co phai do runtime that hay chi la status tre.
+3. Khi CI/CD co immutable tag that, chot lai ArgoCD sync / rollback / screenshot.
+4. Cap nhat report final va checklist voi trang thai thuc te.
+
+## Checklist immutable tag
+
+- Dung [Tu_ArgoCD_Immutable_Tag_Checklist.md](./Tu_ArgoCD_Immutable_Tag_Checklist.md) cho luong:
+  - CI/CD publish immutable tag
+  - cap nhat ArgoCD manifest
+  - sync / rollback / screenshot
+- Trong report final, ghi ro:
+  - `latest` chi la tag tam de test
+  - immutable tag that la tag SHA hoac digest do CI/CD push len registry
+  - `sampledata` hook Job co the con `OutOfSync` theo thiet ke
+- ArgoCD manifest hien tai con `latest` o toan bo app dev/staging core, nen phai doi sau khi co tag that.
+
+## File con `latest`
+
+- Danh sach file ArgoCD con `latest` da duoc khoanh trong [Tu_ArgoCD_Immutable_Tag_Checklist.md](./Tu_ArgoCD_Immutable_Tag_Checklist.md).
+- Khi co SHA that, doi theo nhom:
+  - backend core
+  - ui
+  - storefront
+  - backoffice
+- `sampledata` khong nam trong nhom doi `latest` vi da chuyen sang hook Job seed 1 lan.
 
 1. Cho CI/CD publish immutable tag that.
 2. Kiem tra lai health check.
