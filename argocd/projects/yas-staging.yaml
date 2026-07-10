@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: yas-staging
+  namespace: argocd
+spec:
+  description: YAS staging environment
+  sourceRepos:
+    - https://github.com/Intro-to-DevOps-25-26/yas.git
+  destinations:
+    - namespace: yas-staging
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  orphanedResources:
+    warn: true
+

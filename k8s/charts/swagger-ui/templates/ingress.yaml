@@ -42,6 +42,8 @@ spec:
       http:
         paths:
           {{- range .paths }}
+          {{- $pathServiceName := default $fullName .serviceName }}
+          {{- $pathServicePort := default $svcPort .servicePort }}
           - path: {{ .path }}
             {{- if and .pathType (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
             pathType: {{ .pathType }}
@@ -49,12 +51,12 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}
+                name: {{ $pathServiceName }}
                 port:
-                  number: {{ $svcPort }}
+                  number: {{ $pathServicePort }}
               {{- else }}
-              serviceName: {{ $fullName }}
-              servicePort: {{ $svcPort }}
+              serviceName: {{ $pathServiceName }}
+              servicePort: {{ $pathServicePort }}
               {{- end }}
           {{- end }}
     {{- end }}

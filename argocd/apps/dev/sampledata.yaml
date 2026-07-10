@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sampledata-dev
+  namespace: argocd
+spec:
+  project: yas-dev
+  source:
+    repoURL: https://github.com/Intro-to-DevOps-25-26/yas.git
+    targetRevision: main
+    path: k8s/charts/sampledata
+    helm:
+      releaseName: sampledata
+      values: |
+        sampledata:
+          image:
+            tag: "16.3-alpine"
+          serviceMonitor:
+            enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: yas-dev
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: false
+      selfHeal: false

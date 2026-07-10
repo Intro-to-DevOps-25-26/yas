@@ -1,0 +1,16 @@
+resources:
+  - yas-configuration.yaml
+  - product.yaml
+  - cart.yaml
+  - order.yaml
+  - customer.yaml
+  - inventory.yaml
+  - tax.yaml
+  - media.yaml
+  - search.yaml
+  - storefront-bff.yaml
+  - storefront-ui.yaml
+  - backoffice-bff.yaml
+  - backoffice-ui.yaml
+  - swagger-ui.yaml
+  - sampledata.yaml

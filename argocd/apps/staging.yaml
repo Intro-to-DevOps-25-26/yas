@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: yas-staging
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - name: yas-configuration
+            path: k8s/charts/yas-configuration
+            namespace: yas-staging
+          - name: product
+            path: k8s/charts/product
+            namespace: yas-staging
+          - name: cart
+            path: k8s/charts/cart
+            namespace: yas-staging
+          - name: order
+            path: k8s/charts/order
+            namespace: yas-staging
+          - name: customer
+            path: k8s/charts/customer
+            namespace: yas-staging
+          - name: inventory
+            path: k8s/charts/inventory
+            namespace: yas-staging
+          - name: tax
+            path: k8s/charts/tax
+            namespace: yas-staging
+          - name: media
+            path: k8s/charts/media
+            namespace: yas-staging
+          - name: search
+            path: k8s/charts/search
+            namespace: yas-staging
+          - name: storefront-bff
+            path: k8s/charts/storefront-bff
+            namespace: yas-staging
+          - name: storefront-ui
+            path: k8s/charts/storefront-ui
+            namespace: yas-staging
+          - name: backoffice-bff
+            path: k8s/charts/backoffice-bff
+            namespace: yas-staging
+          - name: backoffice-ui
+            path: k8s/charts/backoffice-ui
+            namespace: yas-staging
+          - name: swagger-ui
+            path: k8s/charts/swagger-ui
+            namespace: yas-staging
+          - name: sampledata
+            path: k8s/charts/sampledata
+            namespace: yas-staging
+  template:
+    metadata:
+      name: '{{name}}-staging'
+    spec:
+      project: yas-staging
+      source:
+        repoURL: https://github.com/Intro-to-DevOps-25-26/yas.git
+        targetRevision: main
+        path: '{{path}}'
+        helm:
+          releaseName: '{{name}}'
+          valueFiles:
+            - values.yaml
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{namespace}}'
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: false
+          selfHeal: false

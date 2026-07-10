@@ -27,4 +27,4 @@
 - Bo qua service mesh trong scope hien tai.
 - ArgoCD chi lam sau khi manifest/chart va health check da on dinh.
 - Cac screenshot va log chung can doi chieu voi cluster thuc te truoc khi nop report.
-
+- Report rieng cho GitOps / ArgoCD cua Tú: [Tu_ArgoCD_GitOps_Report.md](./Tu_ArgoCD_GitOps_Report.md)

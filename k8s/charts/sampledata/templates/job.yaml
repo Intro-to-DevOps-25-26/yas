@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "sampledata.fullname" . }}
+  labels:
+    {{- include "sampledata.labels" . | nindent 4 }}
+spec:
+  backoffLimit: {{ .Values.sampledata.job.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.sampledata.job.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "sampledata.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.sampledata.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "sampledata.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.sampledata.podSecurityContext | nindent 8 }}
+      containers:
+        - name: sampledata
+          securityContext:
+            {{- toYaml .Values.sampledata.securityContext | nindent 12 }}
+          image: "{{ .Values.sampledata.image.repository }}:{{ .Values.sampledata.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.sampledata.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.sampledata.database.usernameSecret }}
+          env:
+            - name: PRODUCT_DB_HOST
+              value: {{ .Values.sampledata.database.host }}
+            - name: PRODUCT_DB_PORT
+              value: {{ .Values.sampledata.database.port | quote }}
+            - name: PRODUCT_DB_NAME
+              value: {{ .Values.sampledata.database.productName }}
+            - name: MEDIA_DB_HOST
+              value: {{ .Values.sampledata.database.host }}
+            - name: MEDIA_DB_PORT
+              value: {{ .Values.sampledata.database.port | quote }}
+            - name: MEDIA_DB_NAME
+              value: {{ .Values.sampledata.database.mediaName }}
+          command:
+            - sh
+            - -ec
+          args:
+            - |
+              export PGPASSWORD="${POSTGRESQL_PASSWORD}"
+              echo "Seeding product DB..."
+              psql -h "${PRODUCT_DB_HOST}" -p "${PRODUCT_DB_PORT}" -U "${POSTGRESQL_USERNAME}" -d "${PRODUCT_DB_NAME}" -v ON_ERROR_STOP=1 -f /scripts/{{ .Values.sampledata.scripts.product }}
+              echo "Seeding media DB..."
+              psql -h "${MEDIA_DB_HOST}" -p "${MEDIA_DB_PORT}" -U "${POSTGRESQL_USERNAME}" -d "${MEDIA_DB_NAME}" -v ON_ERROR_STOP=1 -f /scripts/{{ .Values.sampledata.scripts.media }}
+              echo "Sampledata seeding finished."
+          volumeMounts:
+            - name: sampledata-scripts
+              mountPath: /scripts
+          resources:
+            {{- toYaml .Values.sampledata.resources | nindent 12 }}
+      volumes:
+        - name: sampledata-scripts
+          configMap:
+            name: {{ include "sampledata.fullname" . }}-scripts

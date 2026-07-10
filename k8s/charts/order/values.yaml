@@ -2,6 +2,8 @@ backend:
   image:
     repository: ghcr.io/nashtech-garage/yas-order
     tag: latest
+  serviceMonitor:
+    enabled: false
 
   nameOverride: order
   fullnameOverride: order

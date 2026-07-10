@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cart-staging
+  namespace: argocd
+spec:
+  project: yas-staging
+  source:
+    repoURL: https://github.com/Intro-to-DevOps-25-26/yas.git
+    targetRevision: main
+    path: k8s/charts/cart
+    helm:
+      releaseName: cart
+      values: |
+        backend:
+          image:
+            tag: "latest"
+          serviceMonitor:
+            enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: yas-staging
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: false
+      selfHeal: false

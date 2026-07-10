@@ -2,6 +2,8 @@ backend:
   image:
     repository: ghcr.io/nashtech-garage/yas-backoffice-bff
     tag: latest
+  serviceMonitor:
+    enabled: false
 
   nameOverride: backoffice-bff
   fullnameOverride: backoffice-bff
