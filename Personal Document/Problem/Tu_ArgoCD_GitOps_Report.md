@@ -101,6 +101,8 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - `argocd-application-controller` da quay lai `Running`.
 - `product` da quay ve `1/1 Running`.
 - `sampledata` Job da seeding xong va `Complete 1/1`.
+- `sampledata` Application da duoc chuyen sang `automated.prune=true` de xoa resource cu khi chart doi tu `Deployment` sang `Job`.
+- `sampledata` Job da duoc chuyen sang hook `PostSync` de tranh bi ArgoCD theo doi nhu workload thuong tru.
 - ArgoCD namespace `argocd` da install xong; controller, server, repo-server, redis, dex, notifications, applicationset deu da Ready.
 - `argocd-initial-admin-secret` da duoc tao trong namespace `argocd`.
 
@@ -115,6 +117,8 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - `kubectl kustomize` da pass cho `argocd/apps/dev` va `argocd/apps/staging`.
 - `product` da ve `1/1 Running`.
 - `sampledata` Job da seeding xong va `Complete 1/1`.
+- `sampledata-dev/staging` can prune/sync lai de bo resource cu con treo.
+- `sampledata` nen duoc sync lai sau khi doi sang hook de xac nhan khong con OutOfSync sau seed xong.
 
 ### 2. Viec con lai chua lam xong
 
@@ -125,6 +129,12 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
   - test rollback theo revision
   - chup screenshot va dong goi bao cao cuoi
 - Hien tai cac Application da tao ra, nhung chi `product-dev` da sync xong; cac app con lai can sync tiep neu muon dong bo day du trang thai GitOps.
+
+## Loi con lai can luu y
+
+- `sampledata-staging` co the fail generate manifest neu repo-server khong resolve duoc `github.com`.
+- Day la loi DNS / repo-server, khong phai loi chart `sampledata`.
+- `sampledata-dev/staging` can prune resource cu vi chart da chuyen tu `Deployment` sang `Job`.
 
 ## Task con lai cho ArgoCD
 

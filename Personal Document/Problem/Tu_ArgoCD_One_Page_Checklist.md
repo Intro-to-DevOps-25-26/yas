@@ -30,6 +30,8 @@
 - Da apply `ApplicationSet` live cho `yas-dev` va `yas-staging` len cluster.
 - Da force delete controller pod cu bi ket tren `worker-3` de cho pod moi len `worker-1`.
 - `argocd-application-controller` da quay lai `Running`.
+- Da doi `sampledata` sang `Job` va bat `automated.prune=true` de prune resource cu khi sync.
+- Da chuyen `sampledata` Job sang dang hook PostSync de seed 1 lan, tu xoa sau khi chay xong, tranh OutOfSync do workload tam thoi.
 
 ## Lam ngay
 
@@ -156,6 +158,9 @@
 - Cac app da duoc chuan hoa inline values, chi con doi tag immutable that de thay `latest`.
 - `argocd-application-controller` dang bootstrap lai tren `worker-1`, nen status cua cac app moi tao co the chua hien day du ngay.
 - Cac app khac ngoai `product-dev` hien da tao ra, nhung con dang chua sync day du theo status live.
+- `sampledata-dev/staging` con can prune/sync lai de bo resource cu con treo.
+- `sampledata-staging` co the fail generate manifest neu repo-server khong resolve duoc `github.com`.
+- `sampledata` hook job can refresh/sync lai sau khi doi sang PostSync hook.
 - Sau khi co tag that:
   - sync thu cong app con lai
   - test rollback
