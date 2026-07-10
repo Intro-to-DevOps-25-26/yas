@@ -25,7 +25,7 @@ Mặc định, các bạn sẽ có 1 image cho tất cả các service với tag
 Xây dựng K8S cluster với 1 Master node và 1 worker Node (Hoặc Minikube, hoặc bất kỳ mô hình K8S nào)
 Phần CI, với mỗi branch của user tạo, sau khi user commit code thay đổi, bạn phải build ra một image với tag là commit id cuối cùng của branch đó, và push image đó lên Docker Hub.
 Tạo Job CD cho developer làm việc với tên developer_build. Với job này developer có thể input parameter là branch muốn deploy..
-Ví dụ: developer đang làm việc ở branch: dev_tax_service và update code trong service này. Developer cần biết được sau khi sửa code, thì muốn test thử. Lúc này developer sẽ vào "developer_build" job để điền phần "tax-service" parameter là: dev_tax_service , còn các branch còn lại là main. Khi đó bạn sẽ deploy code của tất cả các service còn lại theo default là tag main hoặc latest, còn "dev_tax_service" sẽ là image với tag ở mục 3.
+Ví dụ: developer đang làm việc ở branch: dev_tax_service và update code trong service này. Developer cần biết được sau khi sửa code, thì muốn test thử. Lúc này developer sẽ vào "developer_build" job để điền phần "tax-service" parameter là: dev_tax_service , còn các branch còn lại là main. Khi đó bạn sẽ deploy code của tất cả các service còn lại theo default là tag main hoặc latest, còn "dev_tax_service" sẽ là image với tag ở mục 3..
 
 	Sau khi deploy, bạn cung cấp domain name:port (dạng service là NodePort), để developer có thể truy cập và test code của mình trực tiếp. Phần domain name, do mình không có dns, vì vậy developer sẽ tự thêm vào file hosts của mình trên máy để chỉ đến Worker node của K8s cluster
 Tạo Jenkins job để xóa phần triển khai ở mục 4 (https://community.jenkins.io/t/how-to-add-hyperlink-using-jenkins-job-builder/7091)
