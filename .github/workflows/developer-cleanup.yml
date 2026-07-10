@@ -71,13 +71,24 @@ jobs:
         run: |
           SERVICE=${{ github.event.inputs.dev_service }}
           DOMAIN=${{ steps.config.outputs.domain }}
-          REPO=$DOCKER_USERNAME/yas-$SERVICE
+          case "$SERVICE" in
+            sampledata) REPO="postgres" ;;
+            *) REPO=$DOCKER_USERNAME/yas-$SERVICE ;;
+          esac
 
           # Determine chart type prefix
           case "$SERVICE" in
             storefront-ui|backoffice-ui) PREFIX="ui" ;;
             swagger-ui) PREFIX="" ;;
+            sampledata) PREFIX="sampledata" ;;
             *) PREFIX="backend" ;;
+          esac
+
+          case "$SERVICE" in
+            storefront-ui|backoffice-ui) DEFAULT_TAG="latest" ;;
+            swagger-ui) DEFAULT_TAG="v4.16.0" ;;
+            sampledata) DEFAULT_TAG="16.3-alpine" ;;
+            *) DEFAULT_TAG="latest" ;;
           esac
 
           # Determine ingress host based on service type
@@ -88,8 +99,9 @@ jobs:
           esac
 
           # Build dynamic --set flags
-          SETS="--set ${PREFIX:+"$PREFIX."}image.repository=$REPO"
-          SETS="$SETS --set ${PREFIX:+"$PREFIX."}image.tag=latest"
+          SETS="--set-string ${PREFIX:+"$PREFIX."}image.repository=$REPO"
+          SETS="$SETS --set-string ${PREFIX:+"$PREFIX."}image.tag=$DEFAULT_TAG"
+          SETS="$SETS --set-string ${PREFIX:+"$PREFIX."}image.digest="
           SETS="$SETS --set ${PREFIX:+"$PREFIX."}serviceMonitor.enabled=false"
 
           # Service type & ingress (Jobs like sampledata don't need service)

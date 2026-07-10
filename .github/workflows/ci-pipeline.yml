@@ -453,11 +453,48 @@ jobs:
 
       - name: Build and push Docker image
         if: steps.check-dockerfile.outputs.exists == 'true'
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ./${{ matrix.service }}
           push: true
           tags: ${{ steps.docker-tags.outputs.tags }}
+
+      - name: Export image metadata
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ secrets.DOCKER_USERNAME }}/yas-${{ matrix.service }}"
+          image_tag="${{ github.sha }}"
+          image_ref="$base:$image_tag"
+          image_digest="${{ steps.build.outputs.digest }}"
+
+          cat > "image-metadata-${{ matrix.service }}.json" <<EOF
+          {
+            "service": "${{ matrix.service }}",
+            "image_tag": "${image_tag}",
+            "image_ref": "${image_ref}",
+            "image_digest": "${image_digest}"
+          }
+          EOF
+
+          {
+            echo "## Image metadata for ${{ matrix.service }}"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Image tag | $image_tag |"
+            echo "| Image ref | $image_ref |"
+            echo "| Image digest | $image_digest |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload image metadata artifact
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-metadata-${{ matrix.service }}
+          path: image-metadata-${{ matrix.service }}.json
 
   test-summary:
     name: Test Summary

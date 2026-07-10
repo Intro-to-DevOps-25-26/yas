@@ -60,3 +60,15 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Render the sampledata image reference.
+Prefer immutable digest when it is provided by CI/CD.
+*/}}
+{{- define "sampledata.image" -}}
+{{- if .Values.sampledata.image.digest }}
+{{- printf "%s@%s" .Values.sampledata.image.repository .Values.sampledata.image.digest }}
+{{- else -}}
+{{- printf "%s:%s" .Values.sampledata.image.repository (.Values.sampledata.image.tag | default .Chart.AppVersion) }}
+{{- end -}}
+{{- end }}

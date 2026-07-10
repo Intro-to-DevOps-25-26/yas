@@ -29,7 +29,7 @@ spec:
         - name: sampledata
           securityContext:
             {{- toYaml .Values.sampledata.securityContext | nindent 12 }}
-          image: "{{ .Values.sampledata.image.repository }}:{{ .Values.sampledata.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "sampledata.image" . }}"
           imagePullPolicy: {{ .Values.sampledata.image.pullPolicy }}
           envFrom:
             - secretRef:

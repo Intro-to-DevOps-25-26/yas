@@ -15,6 +15,8 @@
 - Da gom xong ArgoCD YAML thanh commit rieng.
 - Da gom xong report + overlay values thanh commit rieng.
 - Da chuan hoa workflow service rieng sang SHA tag cho build/push.
+- Da update workflow deploy thu cong de nhan `image_digest` va uu tien immutable image neu co.
+- Da dong bo metadata `image_digest` cho nhom workflow CI service-specific.
 - Da co helper script de sync SHA tag vao overlay dev/staging.
 - Da pin tam thoi `values-dev.yaml` va `values-staging.yaml` sang `0c605cb4` de test.
 - Da verify `helm template` lai cho `product` va `storefront-ui` voi overlay SHA moi.
@@ -24,6 +26,7 @@
 - Da apply `AppProject` va `Application` ban dau len cluster.
 - Da sync thu cong `product-dev` thanh cong qua ArgoCD.
 - Da xac minh `product` ve lai `1/1 Running` sau khi apply tag tam `latest` de bo qua blocker image SHA chua co tren registry.
+- `backoffice-bff` da khoi phuc runtime sau khi import lai realm `Yas` va dieu chinh node schedule.
 - Da chuyen cac app con lai trong `argocd/apps/dev` va `argocd/apps/staging` sang inline values de tranh overlay ngoai chart path.
 - Da apply lai bo Application `dev/staging` len cluster sau khi chuyen inline values.
 - Da clear het reference `../values-dev.yaml` / `../values-staging.yaml` khoi `argocd/apps`.
@@ -32,6 +35,7 @@
 - `argocd-application-controller` da quay lai `Running`.
 - Da doi `sampledata` sang `Job` va bat `automated.prune=true` de prune resource cu khi sync.
 - Da chuyen `sampledata` Job sang dang hook PostSync de seed 1 lan, tu xoa sau khi chay xong, tranh OutOfSync do workload tam thoi.
+- `sampledata-dev/staging` hien van con `OutOfSync` do Job la tai nguyen tam thoi, can prune/sync lai dung thu tu.
 
 ## Lam ngay
 
@@ -154,24 +158,34 @@
 
 ## Con lai theo trang thai hien tai
 
-- Dang cho CI/CD cua Luân publish immutable SHA tag that cho tat ca image can chot.
-- Cac app da duoc chuan hoa inline values, chi con doi tag immutable that de thay `latest`.
+- Da thay het `latest` trong `argocd/apps/dev/*.yaml` va `argocd/apps/staging/*.yaml` bang `image.digest` that lay tu image dang chay.
+- CI/CD da bat dau xuat `image_digest`, nen luong thu cong/GitOps co the doi chieu bang digest that.
+- `sampledata` da sang hook Job, nen chi chot `OutOfSync` neu co ghi chu trong report.
 - `argocd-application-controller` dang bootstrap lai tren `worker-1`, nen status cua cac app moi tao co the chua hien day du ngay.
+- CI workflow da bat dau xuat metadata `image_tag` / `image_ref` / `image_digest`, co the dung lam nguon doi chieu cho CD va deploy thu cong.
+- Namespace `yas` legacy da xoa, chi con `yas-dev` va `yas-staging` la pham vi app can quan tam.
+- ArgoCD repo-server dang bi block boi node state:
+  - worker-1 / worker-3 `NotReady` va co taint `unreachable`
+  - naul1-pc `SchedulingDisabled`
+  - repo-server khong co endpoint nen app status van co the `Unknown`
+- Sau khi repo-server hoi phuc, compare van co luc bi DNS timeout toi `10.96.0.10:53`, nen can tiep tuc giam sat neu muon sync het app ngay.
 - Cac app khac ngoai `product-dev` hien da tao ra, nhung con dang chua sync day du theo status live.
 - `sampledata-dev/staging` con can prune/sync lai de bo resource cu con treo.
-- `sampledata-staging` co the fail generate manifest neu repo-server khong resolve duoc `github.com`.
 - `sampledata` hook job can refresh/sync lai sau khi doi sang PostSync hook.
+- `worker-3` van phai theo doi vi co lich su flap `NotReady`, nen tranh schedule workload quan trong len node nay.
 - Sau khi co tag that:
   - sync thu cong app con lai
   - test rollback
   - chup screenshot
   - dong goi report final
+- Con lai la fix runtime cho cac app con `Progressing/Degraded`, sync/reconcile lai ArgoCD va rollback / screenshot / report.
 
 ## Checklist can lam de chot
 
-1. Pin image tag final bang commit SHA that hoac digest that.
-2. Cap nhat inline values / overlay neu co app moi trong future.
-3. Sync thu cong app con lai theo dung tag that.
-4. Kiem tra `Healthy` / `Synced`.
-5. Test rollback bang revision ArgoCD.
-6. Chup screenshot va dong goi report final.
+1. Dung [Tu_ArgoCD_Immutable_Tag_Checklist.md](./Tu_ArgoCD_Immutable_Tag_Checklist.md) de chot immutable tag that.
+2. Pin image tag final bang commit SHA that hoac digest that.
+3. Cap nhat inline values / overlay neu co app moi trong future.
+4. Sync thu cong app con lai theo dung tag that.
+5. Kiem tra `Healthy` / `Synced`.
+6. Test rollback bang revision ArgoCD.
+7. Chup screenshot va dong goi report final.

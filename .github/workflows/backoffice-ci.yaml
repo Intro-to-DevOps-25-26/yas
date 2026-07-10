@@ -72,9 +72,11 @@ jobs:
           echo "image_ref=$BASE:${{ github.sha }}" >> "$GITHUB_OUTPUT"
       - name: Build Docker image
         if: ${{ github.ref == 'refs/heads/main' }}
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ./backoffice
+          push: true
           tags: ${{ steps.docker-tags.outputs.tags }}
       - name: Run Trivy vulnerability scanner
         if: ${{ github.ref == 'refs/heads/main' }}
@@ -83,13 +85,35 @@ jobs:
           image-ref: ${{ steps.docker-tags.outputs.image_ref }}
           format: 'sarif'
           output: 'trivy-results.sarif'
-      - name: Push Docker image
+      - name: Export image metadata
         if: ${{ github.ref == 'refs/heads/main' }}
-        uses: docker/build-push-action@v6
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > image-metadata-backoffice.json <<EOF
+          {
+            "service": "backoffice",
+            "image_tag": "${{ github.sha }}",
+            "image_ref": "ghcr.io/nashtech-garage/yas-backoffice:${{ github.sha }}",
+            "image_digest": "${{ steps.build.outputs.digest }}"
+          }
+          EOF
+
+          {
+            echo "## Image metadata for backoffice"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Image tag | ${{ github.sha }} |"
+            echo "| Image ref | ghcr.io/nashtech-garage/yas-backoffice:${{ github.sha }} |"
+            echo "| Image digest | ${{ steps.build.outputs.digest }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload image metadata artifact
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@v4
         with:
-          push: true
-          context: ./backoffice
-          tags: ${{ steps.docker-tags.outputs.tags }}
+          name: image-metadata-backoffice
+          path: image-metadata-backoffice.json
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:

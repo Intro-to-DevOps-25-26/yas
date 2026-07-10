@@ -1,6 +1,7 @@
 backend:
   image:
     repository: ghcr.io/nashtech-garage/yas-search
+    digest: sha256:7a013f81583708992706ca1173f72ed4d49e961461ac75b3eaac8750d9843eb1
     tag: latest
   serviceMonitor:
     enabled: false

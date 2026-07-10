@@ -26,6 +26,14 @@ on:
         description: 'Branch name (e.g., dev_tax_service)'
         required: true
         default: main
+      image_tag:
+        description: 'Optional image tag to deploy (defaults to resolved branch SHA)'
+        required: false
+        default: ""
+      image_digest:
+        description: 'Optional immutable image digest from CI/CD (sha256:...)'
+        required: false
+        default: ""
 
 jobs:
   deploy:
@@ -77,6 +85,23 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve image coordinates
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+          if [[ -z "$IMAGE_TAG" ]]; then
+            case "${{ github.event.inputs.dev_service }}" in
+              sampledata) IMAGE_TAG="16.3-alpine" ;;
+              *) IMAGE_TAG="${{ steps.sha.outputs.sha }}" ;;
+            esac
+          fi
+
+          IMAGE_DIGEST="${{ github.event.inputs.image_digest }}"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "image_digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
+
       - name: Read domain config
         id: config
         run: |
@@ -92,8 +117,18 @@ jobs:
       - name: Ensure Docker image exists
         run: |
           SERVICE=${{ github.event.inputs.dev_service }}
-          TAG=${{ steps.sha.outputs.sha }}
-          IMAGE="$DOCKER_USERNAME/yas-$SERVICE:$TAG"
+          TAG=${{ steps.image.outputs.image_tag }}
+          DIGEST=${{ steps.image.outputs.image_digest }}
+          case "$SERVICE" in
+            sampledata) REPO="postgres" ;;
+            *) REPO="$DOCKER_USERNAME/yas-$SERVICE" ;;
+          esac
+
+          if [ -n "$DIGEST" ]; then
+            IMAGE="$REPO@$DIGEST"
+          else
+            IMAGE="$REPO:$TAG"
+          fi
 
           # Remove local copy if any
           docker image rm -f "$IMAGE" 2>/dev/null || true
@@ -124,19 +159,25 @@ jobs:
       - name: Deploy dev service with custom image tag + NodePort
         run: |
           SERVICE=${{ github.event.inputs.dev_service }}
-          TAG=${{ steps.sha.outputs.sha }}
-          REPO=$DOCKER_USERNAME/yas-$SERVICE
+          TAG=${{ steps.image.outputs.image_tag }}
+          DIGEST=${{ steps.image.outputs.image_digest }}
+          case "$SERVICE" in
+            sampledata) REPO="postgres" ;;
+            *) REPO="$DOCKER_USERNAME/yas-$SERVICE" ;;
+          esac
 
           # Determine chart type prefix
           case "$SERVICE" in
             storefront-ui|backoffice-ui) PREFIX="ui" ;;
             swagger-ui) PREFIX="" ;;
+            sampledata) PREFIX="sampledata" ;;
             *) PREFIX="backend" ;;
           esac
 
           # Build dynamic --set flags
-          SETS="--set ${PREFIX:+"$PREFIX."}image.repository=$REPO"
-          SETS="$SETS --set ${PREFIX:+"$PREFIX."}image.tag=$TAG"
+          SETS="--set-string ${PREFIX:+"$PREFIX."}image.repository=$REPO"
+          SETS="$SETS --set-string ${PREFIX:+"$PREFIX."}image.tag=$TAG"
+          SETS="$SETS --set-string ${PREFIX:+"$PREFIX."}image.digest=$DIGEST"
           SETS="$SETS --set ${PREFIX:+"$PREFIX."}serviceMonitor.enabled=false"
 
           # Service type & ingress (Jobs like sampledata don't need service)
@@ -165,7 +206,8 @@ jobs:
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Service | ${{ github.event.inputs.dev_service }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Branch | ${{ github.event.inputs.dev_branch }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Image tag | ${{ steps.sha.outputs.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image tag | ${{ steps.image.outputs.image_tag }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image digest | ${{ steps.image.outputs.image_digest || 'n/a' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Node IP | ${{ steps.svc-info.outputs.node_ip }} |" >> $GITHUB_STEP_SUMMARY
           echo "| NodePort | ${{ steps.svc-info.outputs.node_port }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Access URL | http://${{ steps.svc-info.outputs.node_ip }}:${{ steps.svc-info.outputs.node_port }} |" >> $GITHUB_STEP_SUMMARY
