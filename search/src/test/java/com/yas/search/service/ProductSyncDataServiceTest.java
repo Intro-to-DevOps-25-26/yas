@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -26,6 +27,7 @@ class ProductSyncDataServiceTest {
     private static final String PRODUCT_URL = "http://api.yas.local/product";
 
     private ProductRepository productRepository;
+    private ObjectProvider<ProductRepository> productRepositoryProvider;
 
     private RestClient restClient;
 
@@ -43,9 +45,11 @@ class ProductSyncDataServiceTest {
     void setUp() {
 
         productRepository = mock(ProductRepository.class);
+        productRepositoryProvider = mock(ObjectProvider.class);
         restClient = mock(RestClient.class);
         serviceUrlConfig = mock(ServiceUrlConfig.class);
-        productSyncDataService = new ProductSyncDataService(restClient, serviceUrlConfig, productRepository);
+        when(productRepositoryProvider.getObject()).thenReturn(productRepository);
+        productSyncDataService = new ProductSyncDataService(restClient, serviceUrlConfig, productRepositoryProvider);
         requestHeadersUriSpec = mock(RestClient.RequestHeadersUriSpec.class);
         responseSpec = mock(RestClient.ResponseSpec.class);
 
