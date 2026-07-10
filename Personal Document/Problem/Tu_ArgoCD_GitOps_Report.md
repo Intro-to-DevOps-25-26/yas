@@ -96,6 +96,9 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
 - Da chuyen toan bo Application `dev/staging` sang inline values hoac values.yaml trong chart path de tranh overlay ngoai path.
 - Da apply lai bo Application `dev/staging` len cluster sau khi chuyen inline values.
 - Da clear het reference overlay ngoai chart path trong `argocd/apps`.
+- Da apply `ApplicationSet` live cho `yas-dev` va `yas-staging`.
+- Da force delete `argocd-application-controller-0` bi ket tren `worker-3` de cho pod moi len `worker-1`.
+- `argocd-application-controller` da quay lai `Running`.
 - `product` da quay ve `1/1 Running`.
 - `sampledata` Job da seeding xong va `Complete 1/1`.
 - ArgoCD namespace `argocd` da install xong; controller, server, repo-server, redis, dex, notifications, applicationset deu da Ready.
@@ -121,7 +124,7 @@ GitOps o day khong bat dau bang ArgoCD ngay lap tuc. Luong hop ly la:
   - kiem tra `Healthy` / `Synced`
   - test rollback theo revision
   - chup screenshot va dong goi bao cao cuoi
-- Hien tai chi con cho ArgoCD reconcile day du cac Application moi tao de confirm status UI neu co app nao chua hien het status.
+- Hien tai cac Application da tao ra, nhung chi `product-dev` da sync xong; cac app con lai can sync tiep neu muon dong bo day du trang thai GitOps.
 
 ## Task con lai cho ArgoCD
 

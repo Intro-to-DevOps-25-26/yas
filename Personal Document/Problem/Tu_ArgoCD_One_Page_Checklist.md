@@ -27,6 +27,9 @@
 - Da chuyen cac app con lai trong `argocd/apps/dev` va `argocd/apps/staging` sang inline values de tranh overlay ngoai chart path.
 - Da apply lai bo Application `dev/staging` len cluster sau khi chuyen inline values.
 - Da clear het reference `../values-dev.yaml` / `../values-staging.yaml` khoi `argocd/apps`.
+- Da apply `ApplicationSet` live cho `yas-dev` va `yas-staging` len cluster.
+- Da force delete controller pod cu bi ket tren `worker-3` de cho pod moi len `worker-1`.
+- `argocd-application-controller` da quay lai `Running`.
 
 ## Lam ngay
 
@@ -151,7 +154,8 @@
 
 - Dang cho CI/CD cua Luân publish immutable SHA tag that cho tat ca image can chot.
 - Cac app da duoc chuan hoa inline values, chi con doi tag immutable that de thay `latest`.
-- Mot so Application moi tao co the can moi ArgoCD reconcile xong de hien status day du.
+- `argocd-application-controller` dang bootstrap lai tren `worker-1`, nen status cua cac app moi tao co the chua hien day du ngay.
+- Cac app khac ngoai `product-dev` hien da tao ra, nhung con dang chua sync day du theo status live.
 - Sau khi co tag that:
   - sync thu cong app con lai
   - test rollback
