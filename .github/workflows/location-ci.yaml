@@ -40,6 +40,7 @@ jobs:
         run: mvn checkstyle:checkstyle -pl location -am -Dcheckstyle.output.file=location-checkstyle-result.xml
       - name: Upload Checkstyle Result
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        continue-on-error: true
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/location-checkstyle-result.xml'
