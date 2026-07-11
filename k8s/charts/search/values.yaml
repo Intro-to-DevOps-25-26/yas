@@ -3,6 +3,8 @@ backend:
     repository: devops2526/yas-search
     digest: sha256:47e54732261585da7f47089ced6105f775aafc0abbead1647de86ff90fa3969f
     tag: latest
+  httpPort: 8092
+  metricPort: 8092
   serviceMonitor:
     enabled: false
 
@@ -23,3 +25,24 @@ backend:
       mountPath: /opt/yas/search
   extraApplicationConfigPaths:
     - /opt/yas/search/search-application.yaml
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 12
+    successThreshold: 1
+    httpGet:
+      path: /search/actuator/health/liveness
+      port: metric
+  readinessProbe:
+    periodSeconds: 10
+    failureThreshold: 12
+    successThreshold: 1
+    httpGet:
+      path: /search/actuator/health/readiness
+      port: metric
+  startupProbe:
+    periodSeconds: 10
+    failureThreshold: 30
+    successThreshold: 1
+    httpGet:
+      path: /search/actuator/health/liveness
+      port: metric
