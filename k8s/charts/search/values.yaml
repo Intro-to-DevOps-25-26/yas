@@ -1,7 +1,7 @@
 backend:
   image:
     repository: devops2526/yas-search
-    digest: sha256:c23098599de06cc3f22ffb05c57106dd2b46fd1d251756dbcdc3fb6e7ef1c3ac
+    digest: sha256:47e54732261585da7f47089ced6105f775aafc0abbead1647de86ff90fa3969f
     tag: latest
   serviceMonitor:
     enabled: false
