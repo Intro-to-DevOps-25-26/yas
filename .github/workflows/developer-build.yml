@@ -87,7 +87,7 @@ jobs:
 
       - name: Delete existing deployment to avoid SSA conflicts
         run: |
-          kubectl delete deployment ${{ github.event.inputs.dev_service }} -n yas --ignore-not-found --wait=true
+          kubectl delete deployment ${{ github.event.inputs.dev_service }} -n yas-dev --ignore-not-found --wait=true
 
       - name: Ensure Docker image exists
         run: |
@@ -112,6 +112,9 @@ jobs:
                 docker pull "$SRC_IMAGE"
                 docker tag "$SRC_IMAGE" "$IMAGE"
                 docker push "$IMAGE"
+                LATEST_IMAGE="$DOCKER_USERNAME/yas-$SERVICE:latest"
+                docker tag "$SRC_IMAGE" "$LATEST_IMAGE"
+                docker push "$LATEST_IMAGE"
                 ;;
               *)
                 echo "ERROR: Image $IMAGE does not exist on Docker Hub."
@@ -146,12 +149,12 @@ jobs:
           fi
 
           helm upgrade --install "$SERVICE" "k8s/charts/$SERVICE" \
-            --namespace yas --create-namespace $SETS
+            --namespace yas-dev --create-namespace $SETS
 
       - name: Get NodePort and node IP
         id: svc-info
         run: |
-          NODE_PORT=$(kubectl get svc -n yas ${{ github.event.inputs.dev_service }} \
+          NODE_PORT=$(kubectl get svc -n yas-dev ${{ github.event.inputs.dev_service }} \
             -o jsonpath='{.spec.ports[0].nodePort}')
           NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}')
           echo "node_port=$NODE_PORT" >> "$GITHUB_OUTPUT"

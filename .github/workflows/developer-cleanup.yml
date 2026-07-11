@@ -65,7 +65,7 @@ jobs:
 
       - name: Delete existing deployment to avoid SSA conflicts
         run: |
-          kubectl delete deployment ${{ github.event.inputs.dev_service }} -n yas --ignore-not-found --wait=true
+          kubectl delete deployment ${{ github.event.inputs.dev_service }} -n yas-dev --ignore-not-found --wait=true
 
       - name: Rollback service to latest (ClusterIP + Ingress)
         run: |
@@ -100,13 +100,13 @@ jobs:
           fi
 
           helm upgrade --install "$SERVICE" "k8s/charts/$SERVICE" \
-            --namespace yas --create-namespace $SETS
+            --namespace yas-dev --create-namespace $SETS
 
       - name: Verify reset
         run: |
-          IMAGE=$(kubectl get deployment -n yas ${{ github.event.inputs.dev_service }} \
+          IMAGE=$(kubectl get deployment -n yas-dev ${{ github.event.inputs.dev_service }} \
             -o jsonpath='{.spec.template.spec.containers[0].image}')
-          SVC_TYPE=$(kubectl get svc -n yas ${{ github.event.inputs.dev_service }} \
+          SVC_TYPE=$(kubectl get svc -n yas-dev ${{ github.event.inputs.dev_service }} \
             -o jsonpath='{.spec.type}')
           echo "## ✅ Developer Cleanup Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
