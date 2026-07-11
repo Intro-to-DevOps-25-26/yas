@@ -4,7 +4,7 @@ backend:
     digest: sha256:47e54732261585da7f47089ced6105f775aafc0abbead1647de86ff90fa3969f
     tag: latest
   httpPort: 8092
-  metricPort: 8092
+  metricPort: 8090
   serviceMonitor:
     enabled: false
 
