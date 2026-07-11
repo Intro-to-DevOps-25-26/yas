@@ -1,7 +1,7 @@
 backend:
   image:
     repository: devops2526/yas-search
-    digest: sha256:47e54732261585da7f47089ced6105f775aafc0abbead1647de86ff90fa3969f
+    digest: sha256:b62d2919ccb3ff5e80d4354d84c4644a7b68954d337a2aae639207b5dd911a69
     tag: latest
   httpPort: 8092
   metricPort: 8090
